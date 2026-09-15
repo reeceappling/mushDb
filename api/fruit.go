@@ -64,16 +64,16 @@ func (f Fruit) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    SpeciesOptionalField{&f.Species},
 		SubspeciesOptionalField: f.SubspeciesOptionalField,
-		KnownFruitableField:     KnownFruitableField{new(true)},
+		KnownFruitableField:     KnownFruitableField{utils.Pointer(true)},
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{f.GenSinceSpore},
-			GenSinceFruitOrSpore: new(Generation(0)),
+			GenSinceFruitOrSpore: utils.Pointer(Generation(0)),
 		},
 	}, nil
 }
 
 func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return f.GenSinceSpore, (*Generation)(new(0))
+	return f.GenSinceSpore, (*Generation)(utils.Pointer(0))
 }
 
 func (f Fruit) setTransferChild(_ mongo.SessionContext, _ Transfer, _ geneticSource) error {
@@ -141,7 +141,7 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 	toInsert := &SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
-		ParentTypeField:                   ParentTypeField{new("fruit")},
+		ParentTypeField:                   ParentTypeField{utils.Pointer("fruit")},
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      f.SpeciesField,
 		SubspeciesOptionalField:           f.SubspeciesOptionalField,
@@ -223,7 +223,7 @@ func initializeFruits(ctx context.Context) error {
 			MainCollectionIdField:             MainCollectionIdField{exFruitId},
 			CreationDateField:                 CreationDateField{exampleTime},
 			SpeciesField:                      SpeciesField{testEntryStringId},
-			SubspeciesOptionalField:           SubspeciesOptionalField{new(testEntryStringId)},
+			SubspeciesOptionalField:           SubspeciesOptionalField{utils.Pointer(testEntryStringId)},
 			GenSporeField:                     GenSporeField{&exGenSinceSpore},
 			TransfersOutField:                 TransfersOutField{exAlts},
 			Prints:                            []MainCollectionId{exSporePrint},
@@ -520,7 +520,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var gen = (*Generation)(new(0))
+	var gen = (*Generation)(utils.Pointer(0))
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
@@ -571,7 +571,7 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 		GenSporeField:                     GenSporeField{genetics.GenSinceSpore.Next()},
 		TransfersOutField:                 TransfersOutField{},
 		Prints:                            nil,
-		ParentTypeField:                   ParentTypeField{new(parent.SourceType())},
+		ParentTypeField:                   ParentTypeField{utils.Pointer(parent.SourceType())},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parentId},
 		PicsField:                         PicsField{},            // TODO: ????
 		DisposedField:                     DisposedField{},        // Not disposed

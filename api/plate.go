@@ -159,7 +159,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		PicsModsForChild(p).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
-		withParent(new(from.DbId())).
+		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -237,13 +237,13 @@ func initializePlates(ctx context.Context) error {
 			id := mainCollIdForint(permInt)
 			platesMade[id.AsBase58()] = testAclStrings[i]
 			var tempCoverage = &i
-			var tempBool = new(false)
+			var tempBool = utils.Pointer(false)
 			switch i {
 			case 1:
 				tempCoverage = nil
 				tempBool = nil
 			case 2:
-				tempBool = new(true)
+				tempBool = utils.Pointer(true)
 			default:
 				// Do nothing different
 			}
@@ -691,7 +691,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		importedPicNotes := []Note{} // TODO: ok?
-		importedPic = new(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var condensCovSealed *int = nil
 	var gen *Generation = nil

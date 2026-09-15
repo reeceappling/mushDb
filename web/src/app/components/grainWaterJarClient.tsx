@@ -6,14 +6,15 @@ import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
+    clientPostRequestHeaders,
     CreatedLinkFor,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
-    DoUpdateRequest,
+    DoUpdateRequest, ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
-    FlexedSinglesGroup,
+    FlexedSinglesGroup, HandleJsonResponse, importApiUrlFor, ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -22,7 +23,7 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, RequiredKey
+    OptionalSimpleKey, RequiredKey, viewUrlFor
 } from "@/app/components/common";
 import {DisposedDisplay, ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {GrainBatchData} from "./grainBatchServer";
@@ -44,6 +45,10 @@ import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/m
 import {GrainWaterJarData} from "@/app/components/grainWaterJarServer";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {GrainBatchArea} from "@/app/components/grainBatchClient";
+import {SpeciesData} from "@/app/components/speciesServer";
+import {ExistingSpeciesSubspeciesSelector} from "@/app/components/speciesClient";
+import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {AssertMss} from "@/app/components/mssClient";
 
 // TODO: may want to link grainwater to agar batches. Notes on this left in the agar batch go struct.
 
@@ -232,6 +237,62 @@ export function NewGrainWaterJarForm({handlers, recipe}: {
             newGrainBatchSubmit()
         }}>{"Update"}</button>
     </NewEntryFormWrapper>
+}
+
+export function GrainWaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext(); // TODO: use?
+    const [createdDate, setCreatedDate] = useState(Date.now())
+    // TODO: what else?
+    // Non-required
+    const [notes, setNotes] = useState<Note[]>([])
+
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: how should we handle AltCollIDs here? its not a mainCollId!
+    const [entriesCreated, setEntriesCreated] = useState<string[]>([])
+    const [err, setErr] = useState<string | undefined>()
+    const entriesCreatedDiv = ()=>{
+        if(entriesCreated.length===0){
+            return null
+        }
+        return <div>
+            <div><div>{"Grain Water Jars Created:"}</div></div>
+            {entriesCreated.map((created)=>{
+                return <EntryLinkForId key={created} props={{displayId:created, linkId: created, entryType:"grainWaterJar", openInNewTab: false}}/>
+            })}
+        </div>
+    }
+    const tryImport = (e: React.MouseEvent) => {
+        e.preventDefault()
+        const body: any = {
+            creationDate: createdDate,
+            // optional
+            // TODO: any more?
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        fetch(importApiUrlFor("grainWaterJar"), { // TODO: use other func?
+            method: "POST",
+            headers: clientPostRequestHeaders,
+            body: JSON.stringify(body)
+        })
+            .then(HandleJsonResponse)
+            .then(v => {
+                AssertMss(v)
+                window.location.assign(viewUrlFor("grainWaterJar", v._id))
+            })
+            .catch(ErrHandler(setErr)); // TODO: dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+//         header: "Create Failure",
+//         text: "entry failed to create: " + JSON.stringify(e),
+//         isErr: true
+//     }})
+    }
+    return <ImportEntryFormWrapper entryType={"mss"}>
+        <ErrorDisplay err={err}/>
+        {entriesCreatedDiv()}
+        <DateArea readonly={false} pre={"Created: "} when={Date.now()} updateParent={setCreatedDate}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
+        <button className={"greenButton"} onClick={tryImport}>{"Submit"}</button>
+    </ImportEntryFormWrapper>
 }
 
 export function GrainWaterJarListPageTable({data, onClick, withLink, showDisposed, blacklist}: ListPageItems<GrainWaterJarData>) {

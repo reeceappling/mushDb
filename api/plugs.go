@@ -76,7 +76,7 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 	upd, err := xfer.PicsModsForChild(pl).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
-		withParent(new(from.DbId())).
+		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -194,7 +194,7 @@ func initializePlugs(ctx context.Context) error {
 		testItem := &PlugsJar{
 			MainCollectionIdField: MainCollectionIdField{exPlugId},
 			ParentTypeField: ParentTypeField{
-				new("plate"),
+				utils.Pointer("plate"),
 			},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
 			CreationDateField:                 CreationDateField{exampleTime},
@@ -344,7 +344,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	// Validation
 	for i, d := range data.DowelTypes {

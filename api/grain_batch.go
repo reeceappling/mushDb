@@ -81,11 +81,12 @@ func initializeGrainBatches(ctx context.Context) error {
 
 	// TODO: ENSURE THIS BATCH IS PRESENT AS THE DEFAULT!
 	return env.IfNotProd(ctx, func() error {
+		soakTime, boilTime, dryTime := 8, 30, 4
 		testItem := GrainBatch{
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			SoakTimeHours:              new(8),
-			BoilTimeMins:               new(30),
-			DryTimeHours:               new(4),
+			SoakTimeHours:              &soakTime,
+			BoilTimeMins:               &boilTime,
+			DryTimeHours:               &dryTime,
 			CreationDateField:          CreationDateField{},
 			JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
 			NotesField: NotesField{Notes: []Note{{

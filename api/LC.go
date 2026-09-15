@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -93,7 +94,7 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 	upd, err := xfer.PicsModsForChild(l).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
-		withParent(new(from.DbId())).
+		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -155,7 +156,7 @@ func initializeLCs(ctx context.Context) error {
 			LcRecipeField:           LcRecipeField{exAltId},
 			CreationDateField:       CreationDateField{exampleTime},
 			SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
-			SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
+			SubspeciesOptionalField: SubspeciesOptionalField{&exampleSubspecies},
 			InnocField:              InnocField{&exAltId},
 			GenerationsFields: GenerationsFields{
 				GenSporeField:        GenSporeField{&exGenSinceSpore},
@@ -165,7 +166,7 @@ func initializeLCs(ctx context.Context) error {
 			ParentTypeField:                   ParentTypeField{&exParentType},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
 			PicsField:                         PicsField{exPics},
-			ConfirmedCleanField:               ConfirmedCleanField{exBool},
+			ConfirmedCleanField:               ConfirmedCleanField{&exBool},
 			ContaminationsField:               ContaminationsField{exContams},
 			KnownFruitableField:               KnownFruitableField{exBool},
 			DisposedField:                     DisposedField{&exampleTime},
@@ -321,7 +322,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Species != nil {

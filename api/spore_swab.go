@@ -56,12 +56,12 @@ func (sw SporeSwab) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
-		GenerationsFields:       GenerationsFieldFor(new(Generation(0))),
+		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
 	}, nil
 }
 
 func (sw SporeSwab) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return new(Generation(0)), new(Generation(0))
+	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
 func (sw SporeSwab) id() []byte {

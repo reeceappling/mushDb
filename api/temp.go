@@ -130,7 +130,7 @@ func (rw *MockRfidSvc) ReadRfid(ctx context.Context, readerName shared.RfidReade
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	if id == "1" { // TODO: DO THIS ELSEWHERE!
 		println("making ID 1!")
-		return new(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
+		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
 	realId, err := Base58Str(id).ToMainCollectionId()
 	if err != nil {

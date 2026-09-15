@@ -16,7 +16,7 @@ import (
 // TODO: implement in ts, and reveal in endpoints!
 
 type GrainWaterJar struct {
-	AlternateCollectionIdField `bson:"inline"`
+	AlternateCollectionIdField `bson:"inline"` // TODO: should this be mainCollId? It has no genetics!
 	GrainBatchField            `bson:"inline"`
 	NotesField                 `bson:"inline"`
 	CreationDateField          `bson:"inline"`
@@ -70,9 +70,9 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 	return env.IfNotProd(ctx, func() error {
 
 		testItem := GrainWaterJar{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			GrainBatchField:            GrainBatchField{},   // TODO: ???
-			CreationDateField:          CreationDateField{}, // TODO: ???
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId}, // TODO: should this be mainCollId?
+			GrainBatchField:            GrainBatchField{exAltId},            // TODO: ??? default to 0-batch for imports?
+			CreationDateField:          CreationDateField{},                 // TODO: ???
 			NotesField:                 NotesField{exampleNotes()},
 			LastUpdatedField:           LastUpdatedField{exampleTime},
 		}

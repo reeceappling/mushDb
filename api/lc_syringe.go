@@ -72,12 +72,12 @@ func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
 		KnownFruitableField:     sw.KnownFruitableField,
-		GenerationsFields:       GenerationsFieldFor(new(Generation(0))),
+		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
 	}, nil
 }
 
 func (sw LcSyringe) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return new(Generation(0)), new(Generation(0))
+	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
 func (sw LcSyringe) altId() MainCollectionId {
@@ -344,7 +344,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	if data.Generation < 1 {
 		dbErrCtx(ctx, w, errors.New("generation cannot be <=0 for a non-spore import"), http.StatusBadRequest)

@@ -101,8 +101,8 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 		PicsModsForChild(b).
 		Set("sealDate", xfer.LastUpdated).
 		withInnoc(xfer).
-		withParentType(new(xfer.FromType)).
-		withParent(new(from.DbId())).
+		withParentType(utils.Pointer(xfer.FromType)).
+		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -169,7 +169,7 @@ func initializeBags(ctx context.Context) error {
 		testItem := &Bag{
 			MainCollectionIdField:       MainCollectionIdField{testId},
 			SubstrateRecipeField:        SubstrateRecipeField{exAltId},
-			SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: new(altCollIdForint(idWoodPellets))},
+			SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
 			PcRunField:                  PcRunField{exAltId},
 			FilterSize:                  filterSizetwoMic,
 			CreationDateField:           CreationDateField{exampleTime},

@@ -52,7 +52,7 @@ func (b58str Base58Str) Bytes() []byte {
 // ConvertBase10StringToLittleEndianBytes converts a base-10 string to little-endian bytes.
 func convertBase10StringToLittleEndianBytes(base10 string) ([]byte, error) { // TODO: AI-GENERATED, GO OVER IT
 	// Parse the base-10 string into a big.Int.
-	n := new(big.Int)
+	n := utils.Pointer(big.Int)
 	_, ok := n.SetString(base10, 10)
 	if !ok {
 		return nil, fmt.Errorf("invalid base-10 string: %s", base10)
@@ -148,7 +148,7 @@ func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	if len(littleEndianBytes)%4 != 0 {
 		return "", errors.Join(errors.New("Base2BytesToBase58 failed"), ErrInvalidByteLength) // TODO: unnecesary?
 	}
-	baseTenStr := []byte(new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
+	baseTenStr := []byte(utils.Pointer(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
 	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
 	//println(string(baseTenStr), string(encoded), "a thing") // TODO; DEL
 	if err != nil {
@@ -428,7 +428,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second) // TODO: no?
+		SetTimeout(15 * time.Second)         // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -749,6 +749,8 @@ var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		handler = importFruitHandler
 	case "fruitingChamber":
 		handler = importFruitingChamberHandler
+	//case "grainWaterJar": // TODO: enable
+	//	handler = importGrainWaterJarHandler
 	case "jar":
 		handler = importJarHandler
 	case "lc":

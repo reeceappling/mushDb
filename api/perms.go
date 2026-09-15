@@ -16,9 +16,9 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 	var getAllProjectsCompleteArg *bool = nil
 	if complete != "" {
 		if complete == "true" {
-			getAllProjectsCompleteArg = new(true)
+			getAllProjectsCompleteArg = utils.Pointer(true)
 		} else if complete == "false" {
-			getAllProjectsCompleteArg = new(false)
+			getAllProjectsCompleteArg = utils.Pointer(false)
 		}
 	}
 

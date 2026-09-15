@@ -179,10 +179,10 @@ const (
 
 type UserProjectPerm bool // Always referenced as a pointer, where true===admin, false===write, and nil===read
 func UserProjectAdmin() *UserProjectPerm {
-	return new(UserProjectPerm(true))
+	return utils.Pointer(UserProjectPerm(true))
 }
 func UserProjectWrite() *UserProjectPerm {
-	return new(UserProjectPerm(false))
+	return utils.Pointer(UserProjectPerm(false))
 }
 func UserProjectRead() *UserProjectPerm {
 	return nil

@@ -581,7 +581,7 @@ type contamForm struct {
 func (cf contamForm) convert() Contamination {
 	var loc *ImageLocation = nil
 	if cf.Location != nil {
-		loc = new(ImageLocation(*cf.Location))
+		loc = utils.Pointer(ImageLocation(*cf.Location))
 	}
 	return Contamination{
 		ContaminationLessLocation: ContaminationLessLocation{
@@ -728,11 +728,12 @@ func handleFileDeleteErr(err error) {
 var (
 	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
+	defaultGrainBatchId  = exAltId // TODO; ensure ok
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}
 	exampleSpecies       = "Beech"
-	exampleSubspecies    = new("Brown Beech")
+	exampleSubspecies    = "Brown Beech"
 	exGenSinceSpore      = Generation(2)
 	exGenSinceFruitSpore = Generation(1)
 	exParentType         = "plate"
@@ -762,8 +763,8 @@ var (
 	exUserNoProjectWrite = "2@example.com"
 	exProjPerms          = map[string]*bool{
 		string(exUserRead[:]):  nil,
-		string(exUserWrite[:]): new(false),
-		string(exUserAdmin[:]): new(true),
+		string(exUserWrite[:]): utils.Pointer(false),
+		string(exUserAdmin[:]): utils.Pointer(true),
 	}
 	exAcl = ACL{
 		Users: map[string]bool{
@@ -791,7 +792,7 @@ var (
 		},
 		BlanketPerm: RWPermRead(),
 	}
-	exBool                     = new(true)
+	exBool                     = utils.Pointer(true)
 	exPicLoc                   = "test.jpg" // Uses a picture from another site...
 	exPicWithNotesLessLocation = PicWithNotesLessLocation{
 		RequiredTimeField: exReqTimeField,
