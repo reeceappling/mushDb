@@ -114,4 +114,4 @@ require (
 	gotest.tools/v3 v3.5.2 // indirect
 )
 
-tool github.com/99designs/gqlgen
+tool github.com/99designs/gqlgen // TODO: probably get rid of this since we're not using graphql
