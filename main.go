@@ -335,15 +335,16 @@ func main() {
 	http.Handle("/", Middlewares(tracerMiddleware("/"))(unAuthedProxied))           // TODO: options middleware?
 
 	// Specific React/Next pages
-	http.Handle("/import/{variant}", Middlewares(tracerMiddleware("/import/{variant}"))(authedProxied))                 // GET import is here (import item page) // TODO: options middleware?
-	http.Handle("/new/{variant}", Middlewares(tracerMiddleware("/new/{variant}"))(authedProxied))                       // GET new item is here (new item page) // TODO: options middleware?
-	http.Handle("/view/{variant}/{entryId}", Middlewares(tracerMiddleware("/view/{variant}/{entryId}"))(authedProxied)) // GET view item is here (view item page) // TODO: options middleware?
-	http.Handle("/list/{variant}", Middlewares(tracerMiddleware("/list/{variant}"))(authedProxied))                     // GET list is here (list items page) // TODO: options middleware?
+	http.Handle("/import/{variant}", Middlewares(tracerMiddleware("/import/{variant}"), OptionsGetOnly /* TODO: ensure ok*/)(authedProxied))                 // GET import is here (import item page) // TODO: options middleware?
+	http.Handle("/new/{variant}", Middlewares(tracerMiddleware("/new/{variant}"), OptionsGetOnly /* TODO: ensure ok*/)(authedProxied))                       // GET new item is here (new item page) // TODO: options middleware?
+	http.Handle("/view/{variant}/{entryId}", Middlewares(tracerMiddleware("/view/{variant}/{entryId}"), OptionsGetOnly /* TODO: ensure ok*/)(authedProxied)) // GET view item is here (view item page) // TODO: options middleware?
+	http.Handle("/list/{variant}", Middlewares(tracerMiddleware("/list/{variant}"), OptionsGetOnly /* TODO: ensure ok*/)(authedProxied))                     // GET list is here (list items page) // TODO: options middleware?
 	// Error and test pages
-	http.Handle("/error/{errTxt}", Middlewares(tracerMiddleware("/err"))(webProxyHandler)) // TODO: rate limit???? ctx middleware? auth middleware? // TODO: options middleware?
-	http.Handle("/testpage", Middlewares(tracerMiddleware("/testpage"))(webProxyHandler))  // GET testpage is here (test page)       // TODO: REMOVE // TODO: options middleware?
-	// Admin pages
-	http.Handle("/whitelistUser", Middlewares(tracerMiddleware("/whitelistUser"))(adminProxied)) // TODO: THIS! // TODO: options middleware?
+	http.Handle("/error/{errTxt}", Middlewares(tracerMiddleware("/err"), OptionsGetOnly /* TODO: ensure ok*/)(webProxyHandler)) // TODO: rate limit???? ctx middleware? auth middleware? // TODO: options middleware?
+	http.Handle("/testpage", Middlewares(tracerMiddleware("/testpage"), OptionsGetOnly /* TODO: ensure ok*/)(webProxyHandler))  // GET testpage is here (test page)       // TODO: REMOVE // TODO: options middleware?
+	// Admin pages (and admin backend endpoints)
+	whitelistuserGoHandler := Middlewares(wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)                                                                                   // TODO: validate works
+	http.Handle("/whitelistUser", Middlewares(tracerMiddleware("/whitelistUser"), OptionsGetPost /* TODO: ensure ok*/)(GetPostSplitterHandler(adminProxied, whitelistuserGoHandler))) // TODO: THIS! // TODO: options middleware?
 
 	println("Defining sensor data endpoints")
 	// TODO: this
@@ -353,7 +354,7 @@ func main() {
 	//http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
 
 	println("Defining admin endpoints")
-	http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
+	// TODO: refer to post side of /whitelistUser... http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, OptionsPostOnly, wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
 
 	// TODO: ADMIN STUFF
 	// TODO: user-viewer/editor for admin
@@ -362,27 +363,28 @@ func main() {
 	println("Defining db interaction endpoints")
 	// TODO: CORS db middlewares?
 	// Resolving Types
-	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware? // TODO: options middleware?
+	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware /*TODO:OptionsGetOnly,*/, wrapWriter, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware? // TODO: options middleware?
 	// Get handlers
-	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getAnyCollectionHandler)) // TODO: options middleware?
-	http.Handle(imagesEndpoint+"{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler))        // TODO: rate limiter ok here? // TODO: options middleware?
+	// TODO: consider (probably not) changing GET to getting, POST to creating, PUT to importing?, patch to update, and DELETE to delete????
+	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter /*TODO:OptionsGetOnly,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getAnyCollectionHandler)) // TODO: options middleware?
+	http.Handle(imagesEndpoint+"{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter /*TODO:OptionsGetOnly,*/, ctxMiddleware, authOrDenyMiddleware)(getImageHandler))        // TODO: rate limiter ok here? // TODO: options middleware?
 	// Creation handlers
-	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler)) // TODO: options middleware?
+	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter /*TODO:OptionsPostOnly,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler)) // TODO: options middleware?
 	// update handlers
-	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid? // TODO: options middleware?
+	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter /*TODO:OptionsPostOnly,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid? // TODO: options middleware?
 	// import handlers
-	http.Handle("/db/import/{variant}", Middlewares(tracerMiddleware("/db/import"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler)) // TODO: options middleware?
+	http.Handle("/db/import/{variant}", Middlewares(tracerMiddleware("/db/import"), rateLimiter /*TODO:OptionsPostOnly,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler)) // TODO: options middleware?
 
 	// delete handlers
 	// TODO: enable! http.Handle("/db/delete/{endpt}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.AdminOnlyMiddleware)(rfid.DeleteHandler))
 	// List handlers
-	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                 // TODO: options middleware?
-	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
-	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
+	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter /*TODO:OptionsGetOnly?,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                // TODO: options middleware?
+	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware /*TODO:OptionsGetOnly,*/, wrapWriter, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
+	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter /*TODO:OptionsGetOnly,*/, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
 	// RedirectHandlers
 	http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware)(getRfidHandler)) // TODO: require auth? this will let someone know if an id exists....
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
-	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything... // TODO: options middleware?
+	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options") /*TODO:OptionsGetOnly,*/, rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
 
 	// TODO: after ListenAndServe is called, also set api server health to ok?
 	if err = srv.ListenAndServe(); err != nil {
@@ -481,6 +483,19 @@ func OptionsMiddleware(acceptableMethods ...string) SingleMiddleware {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+func GetPostSplitterHandler(getHandler, postHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			getHandler.ServeHTTP(w, r)
+		case http.MethodPost:
+			postHandler.ServeHTTP(w, r)
+		default:
+			http.Error(w, "invalid http method, must be get or post", http.StatusMethodNotAllowed)
+			return
+		}
+	})
 }
 
 //type customSessionStore struct { // TODO: use or delete
