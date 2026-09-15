@@ -318,7 +318,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{now},
 		// TODO: USE PARENT PERMS?????
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSaleRequest struct {

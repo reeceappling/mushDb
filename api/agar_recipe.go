@@ -301,7 +301,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 func validateAgarRecipeCreationAgar(agar int) error { // TODO: ensure ok
 	if agar < 10 {

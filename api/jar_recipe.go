@@ -234,7 +234,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateJarRecipeRequest struct {

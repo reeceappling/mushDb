@@ -166,7 +166,7 @@ func initializeLCs(ctx context.Context) error {
 			ParentTypeField:                   ParentTypeField{&exParentType},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
 			PicsField:                         PicsField{exPics},
-			ConfirmedCleanField:               ConfirmedCleanField{&exBool},
+			ConfirmedCleanField:               ConfirmedCleanField{exBool},
 			ContaminationsField:               ContaminationsField{exContams},
 			KnownFruitableField:               KnownFruitableField{exBool},
 			DisposedField:                     DisposedField{&exampleTime},

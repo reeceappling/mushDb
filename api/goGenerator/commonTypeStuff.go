@@ -270,6 +270,7 @@ var mainCollTypes = map[string]mainCollInfo{
 	"Fruit":           infoFor("f", "FruitSourceType", "fruit", "FruitsCollName", "fruits"),
 	"FruitingChamber": infoFor("f", "FruitingChamberSourceType", "fruitingChamber", "FruitingChamberCollectionName", "fruitingChambers"),
 	"GrainJar":        infoFor("j", "GrainJarSourceType", "jar", "GrainJarCollectionName", "grainJars"),
+	"GrainWaterJar":   infoFor("wj", "GrainWaterJarSourceType", "grainWaterJar", "GrainWaterJarCollectionName", "grainWaterJars"),
 	"LiquidCulture":   infoFor("l", "LcSourceType", "lc", "LCCollectionName", "LCJars"),
 	"LcSyringe":       infoFor("lcs", "LcSyringeSourceType", "lcSyringe", "LcSyringeCollectionName", "lcSyringes"),
 	"MSS":             infoFor("M", "MssSourceType", "mss", "MssCollectionName", "multisporeSyringes"),
@@ -336,7 +337,6 @@ func createOtherCollTypes() map[string]otherCollInfo {
 	out := map[string]otherCollInfo{
 		"AgarBatch":       infoForO("batch", "AgarBatchCollectionName", "agarBatches", "AlternateCollectionId"),
 		"GrainBatch":      infoForO("batch", "GrainBatchCollectionName", "grainBatches", "AlternateCollectionId"),
-		"GrainWaterJar":   infoForO("wj", "GrainWaterJarCollectionName", "gwJars", "AlternateCollectionId"),
 		"AgarRecipe":      infoForO("recipe", "AgarRecipesCollectionName", "agarRecipes", "AlternateCollectionId"), // TODO: or do we want string for name?
 		"LcRecipe":        infoForO("recipe", "LcRecipesCollectionName", "lcRecipes", "AlternateCollectionId"),
 		"PCRun":           infoForO("run", "PcRunCollectionName", "pcRuns", "AlternateCollectionId"),

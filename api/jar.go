@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -179,7 +180,7 @@ func initializeJars(ctx context.Context) error {
 			PcRunOptionalField:      PcRunOptionalField{&exAltId},
 			CreationDateField:       CreationDateField{exampleTime},
 			SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
-			SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
+			SubspeciesOptionalField: SubspeciesOptionalField{&exampleSubspecies},
 			InnocField:              InnocField{&exAltId},
 			GenerationsFields: GenerationsFields{
 				GenSporeField:        GenSporeField{&exGenSinceSpore},

@@ -16,13 +16,53 @@ import (
 // TODO: implement in ts, and reveal in endpoints!
 
 type GrainWaterJar struct {
-	AlternateCollectionIdField `bson:"inline"` // TODO: should this be mainCollId? It has no genetics!
-	GrainBatchField            `bson:"inline"`
-	NotesField                 `bson:"inline"`
-	CreationDateField          `bson:"inline"`
-	LastUpdatedField           `bson:"inline"`
-	DisposedField              `bson:"inline"`
-	AclField                   `bson:"inline"`
+	MainCollectionIdField `bson:"inline"`
+	GrainBatchField       `bson:"inline"`
+	NotesField            `bson:"inline"`
+	CreationDateField     `bson:"inline"`
+	LastUpdatedField      `bson:"inline"`
+	DisposedField         `bson:"inline"`
+	AclField              `bson:"inline"`
+}
+
+func (f GrainWaterJar) DbId() MainCollectionId {
+	return f.Id
+}
+
+func (wj *GrainWaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
+	return GeneticParentInfo{}, errors.New("grain water jars have no genetics, and cannot be used as a parent") // TODO: ok?
+}
+
+func (wj *GrainWaterJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+	return errors.New("grainwater jars cannot be used as a parent for transfers")
+}
+
+func (wj *GrainWaterJar) generation() (sinceSpore, sinceSporeOrClone *Generation) {
+	return nil, nil
+}
+
+func (wj *GrainWaterJar) CanTransferTo(dst geneticSource) error {
+	return errors.New("not transferrable") // TODO: var?
+}
+
+func (wj *GrainWaterJar) Innoculatable() error {
+	return errors.New("not innoculatable") // TODO: var?
+}
+
+func (wj *GrainWaterJar) EntryType() string {
+	return "grainWaterJar" // TODO: const
+}
+
+func (wj *GrainWaterJar) Children(ctx context.Context) ([]MainCollectionItem, error) {
+	panic("not implemented")
+}
+
+func (wj *GrainWaterJar) GetParent(ctx context.Context) (MainCollectionItem, error) {
+	return MainCollectionItem(nil), errors.New("GWJs do not support GetParent") // TODO: ok?
+}
+
+func (gwj *GrainWaterJar) SourceType() string {
+	return "grainWaterJar" // TODO: const
 }
 
 func createGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -41,16 +81,16 @@ func createGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to validate grain batch: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := newAlternateCollectionId()
-	toInsert := &GrainWaterJar{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		GrainBatchField:            req.GrainBatchField,
-		NotesField:                 req.NotesField,
-		CreationDateField:          CreationDateField{now},
-		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanWriteAcl(),
+	id := <-newMcids
+	toInsert := GrainWaterJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		GrainBatchField:       req.GrainBatchField,
+		NotesField:            req.NotesField,
+		CreationDateField:     CreationDateField{now},
+		LastUpdatedField:      LastUpdatedField{now},
+		AclField:              allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
 func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
@@ -68,16 +108,16 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 	}
 
 	return env.IfNotProd(ctx, func() error {
-
+		id := mainCollIdForint(idTestGrainWaterJar)
 		testItem := GrainWaterJar{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId}, // TODO: should this be mainCollId?
-			GrainBatchField:            GrainBatchField{exAltId},            // TODO: ??? default to 0-batch for imports?
-			CreationDateField:          CreationDateField{},                 // TODO: ???
-			NotesField:                 NotesField{exampleNotes()},
-			LastUpdatedField:           LastUpdatedField{exampleTime},
+			MainCollectionIdField: MainCollectionIdField{id},
+			GrainBatchField:       GrainBatchField{GrainBatch: defGrainBatchId}, // TODO: ??? default to 0-batch for imports?
+			CreationDateField:     CreationDateField{},                          // TODO: ???
+			NotesField:            NotesField{exampleNotes()},
+			LastUpdatedField:      LastUpdatedField{exampleTime},
 		}
-		println("test Grain Water Jar:", exAltId.AsBase58())
-		return addTestAltEntries(ctx, testItem)
+		println("test Grain Water Jar:", id.AsBase58())
+		return addTestMainEntries(ctx, &testItem)
 	})
 }
 
@@ -97,7 +137,7 @@ func (req updateGrainWaterJarRequest) modsFor(existing *GrainWaterJar, acl AclFi
 }
 
 func updateGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
-	_, id, err := altCollIdFromRequest(r, w)
+	_, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
@@ -113,9 +153,8 @@ func updateGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(GrainWaterJarCollectionName)
-	existing, err := GetAltCollectionItem(ctx, id, &GrainWaterJar{})
+	ctx := r.Context()
+	existing, err := GetMainCollectionItemSpecific(ctx, id, &GrainWaterJar{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -124,7 +163,7 @@ func updateGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, req.modsFor, existing, req.PermsOnRequest)
 }
 
 type importGrainWaterJarRequest struct {
@@ -154,16 +193,16 @@ func importGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TOD
 		}
 	}
 
-	id := newAlternateCollectionId()
+	id := <-newMcids
 	toInsert := &GrainWaterJar{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		GrainBatchField:            GrainBatchField{GrainBatch: *req.GrainBatch},
-		NotesField:                 req.NotesField,
-		CreationDateField:          CreationDateField{now},
-		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanWriteAcl(),
+		MainCollectionIdField: MainCollectionIdField{id},
+		GrainBatchField:       GrainBatchField{GrainBatch: *req.GrainBatch},
+		NotesField:            req.NotesField,
+		CreationDateField:     CreationDateField{now},
+		LastUpdatedField:      LastUpdatedField{now},
+		AclField:              allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type GrainWaterJarsField struct {

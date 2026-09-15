@@ -225,7 +225,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSpeciesRequest struct {

@@ -728,7 +728,7 @@ func handleFileDeleteErr(err error) {
 var (
 	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
-	defaultGrainBatchId  = exAltId // TODO; ensure ok
+	defGrainBatchId      = exAltId // TODO; ensure ok
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}

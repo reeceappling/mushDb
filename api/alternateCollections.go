@@ -515,10 +515,11 @@ func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58S
 }
 
 // finishCreateAlternateEntry should only error in cases where the creation did not write to the db
-func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) error { // TODO: error is new, handle
+func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) error {
 	status, err := finishCreateAlternateEntryNoWrite(ctx, toInsert)
 	if err != nil {
 		http.Error(w, "failed to insert one: "+err.Error(), status)
+		return err
 	}
 	writeEntryAsResponseOrFailSilently(w, toInsert)
 	return nil

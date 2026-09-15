@@ -52,7 +52,7 @@ func (b58str Base58Str) Bytes() []byte {
 // ConvertBase10StringToLittleEndianBytes converts a base-10 string to little-endian bytes.
 func convertBase10StringToLittleEndianBytes(base10 string) ([]byte, error) { // TODO: AI-GENERATED, GO OVER IT
 	// Parse the base-10 string into a big.Int.
-	n := utils.Pointer(big.Int)
+	n := &big.Int{}
 	_, ok := n.SetString(base10, 10)
 	if !ok {
 		return nil, fmt.Errorf("invalid base-10 string: %s", base10)
@@ -148,7 +148,8 @@ func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	if len(littleEndianBytes)%4 != 0 {
 		return "", errors.Join(errors.New("Base2BytesToBase58 failed"), ErrInvalidByteLength) // TODO: unnecesary?
 	}
-	baseTenStr := []byte(utils.Pointer(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
+	temp := &big.Int{}
+	baseTenStr := []byte(temp.SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
 	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
 	//println(string(baseTenStr), string(encoded), "a thing") // TODO; DEL
 	if err != nil {

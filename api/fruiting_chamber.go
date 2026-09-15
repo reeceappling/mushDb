@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -178,7 +179,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 			},
 			KnownFruitableField:               KnownFruitableField{exBool},
 			SpeciesOptionalField:              SpeciesOptionalField{&exampleSpecies},
-			SubspeciesOptionalField:           SubspeciesOptionalField{exampleSubspecies},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&exampleSubspecies},
 			InnocField:                        InnocField{&xfer},
 			TransfersOutField:                 TransfersOutField{exAlts},
 			ParentTypeField:                   ParentTypeField{&exParentType},

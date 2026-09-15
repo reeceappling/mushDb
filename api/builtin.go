@@ -29,6 +29,7 @@ const ( // MainCollection test ints
 	idTestLC2
 	idTestPlateBlanketWrite
 	idTestPlateAdminOnly // No blanket permission, no users, no projects
+	idTestGrainWaterJar
 )
 
 func init() { // TODO: remove this block!!!!!

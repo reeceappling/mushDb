@@ -114,7 +114,7 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	_ = finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSubstrateBatchRequest struct {
