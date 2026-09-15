@@ -193,7 +193,7 @@
 # Wishlist
 - [x] [Google analytics](https://nextjs.org/docs/messages/next-script-for-ga)
   - [x] Add Google Analytics to all pages
-    - [ ] Validate working
+    - [ ] Validate working (it isnt)
   - [ ] Google tag? see what this is
 - [ ] Legal Pages
   - [ ] Policies links page
@@ -207,7 +207,7 @@
 - [ ] Hidden links to honeypot bots? (like a hidden link to a page that is not linked anywhere else, and if a bot hits it, we can trap or ban it)
   - [ ] Check bots headers? cookies? user-agent? mouse movements?
   - [ ] Captchas for what we think are bots?
-- [ ] Monetization
+- [ ] Monetization - Not really important whatsoever
   - [ ] Offer alternatives for monetization, such as between
     - [ ] Ads
     - [ ] Donations
