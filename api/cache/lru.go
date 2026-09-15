@@ -17,8 +17,7 @@ type LRU struct { // TODO: EXPAND USAGE OF LRU CACHE TO OTHER THINGS, OR CONSIDE
 	newest, oldest *cacheNode
 	moveToFront    chan<- *cacheNode
 	addNode        chan<- *cacheNode
-	// TODO: channel for adding?
-}
+} // TODO: consider using an array instead of a linkedList!
 
 func NewLRU(maxSize int) *LRU {
 	frontChan := make(chan *cacheNode, maxSize) // TODO: chan size ok?
@@ -69,27 +68,31 @@ func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 	val, exists := c.m.Load(key)
 	if exists {
 		existingNode := val.(*cacheNode)
-		existingNode.value = value
-		c.moveToFront <- existingNode // TODO: used to be c.moveExistingToFront(existingNode)
+		if string(value) != string(existingNode.value) {
+			existingNode.value = value // TODO: modifying values may need a per-node mutex?
+		}
+		go func() { // TODO: gofunc ok here?
+			c.moveToFront <- existingNode
+		}()
 		return true
 	}
-	node := &cacheNode{
-		key:   key,
-		value: value,
-	}
-
-	c.addNode <- node
+	// If new, then add the node
+	go func() { // TODO: gofunc ok here?
+		c.addNode <- &cacheNode{
+			key:   key,
+			value: value,
+		}
+	}()
 	return false
 }
 func (c *LRU) Evict(key string) (evicted bool) {
 	evicted = false
-	val, exists := c.m.Load(key)
+	val, exists := c.m.LoadAndDelete(key)
 	if exists {
 		c.mu.Lock()
 		evicted = c.removeNodeFromLL(val.(*cacheNode))
 		c.mu.Unlock()
 	}
-	c.m.Delete(key)
 	return evicted
 }
 
@@ -164,6 +167,7 @@ func (c *LRU) removeNodeFromLLNoCountChange(existingNode *cacheNode) (removed bo
 		// older.newer, newer.older = newer, older
 		break
 	}
+	// TODO: nil-out the node's pointers? probably unnecessary
 	return true
 }
 func (n *cacheNode) setNewer(node *cacheNode) {
