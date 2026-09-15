@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -84,9 +83,9 @@ func initializeGrainBatches(ctx context.Context) error {
 	return env.IfNotProd(ctx, func() error {
 		testItem := GrainBatch{
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			SoakTimeHours:              utils.Pointer(8),
-			BoilTimeMins:               utils.Pointer(30),
-			DryTimeHours:               utils.Pointer(4),
+			SoakTimeHours:              new(8),
+			BoilTimeMins:               new(30),
+			DryTimeHours:               new(4),
 			CreationDateField:          CreationDateField{},
 			JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
 			NotesField: NotesField{Notes: []Note{{

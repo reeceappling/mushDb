@@ -200,7 +200,7 @@ func (id BinaryCollectionId) ToBase58Bytes() []byte {
 }
 
 func (id BinaryCollectionId) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, id.AsBase58())), nil
+	return fmt.Appendf(nil, `"%s"`, id.AsBase58()), nil
 }
 
 func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
@@ -266,7 +266,7 @@ func NextMainCollectionId() MainCollectionId {
 }
 func NextMainCollectionIds(num int) []MainCollectionId {
 	out := make([]MainCollectionId, num)
-	for i := 0; i < num; i++ {
+	for i := range num {
 		out[i] = <-newMcids
 	}
 	return out
@@ -428,14 +428,14 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second)         // TODO: no?
+		SetTimeout(15 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to connect to db"), err)
 	}
 	connOk := false
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		println(fmt.Sprintf(`Testing connection attempt no.%d for user %s at %s`, i, usern, uri)) // TODO:" no uri
 		err = client.Ping(ctx, nil)
 		if err != nil {
@@ -635,7 +635,7 @@ var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
+	_, err = w.Write(fmt.Appendf(nil, `%s/%s`, out.EntryType, out.Id.AsBase58()))
 	handleWriteErr(err, w)
 }
 
@@ -661,6 +661,8 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		handler = createFruitingChamberHandler
 	case "grainBatch":
 		handler = createGrainBatchHandler
+	//case "grainWaterJar": // TODO: enable?
+	//	handler = createGrainWaterJarHandler
 	case "jar":
 		handler = createJarHandler
 	case "jarRecipe":
@@ -743,22 +745,22 @@ var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	switch endpt {
 	case "bag":
 		handler = importBagHandler
-	case "lc":
-		handler = importLiquidCultureHandler
-	case "lcSyringe":
-		handler = importLcSyringeHandler
-	case "plugs":
-		handler = importPlugsHandler
 	case "fruit":
 		handler = importFruitHandler
 	case "fruitingChamber":
 		handler = importFruitingChamberHandler
 	case "jar":
 		handler = importJarHandler
+	case "lc":
+		handler = importLiquidCultureHandler
+	case "lcSyringe":
+		handler = importLcSyringeHandler
 	case "mss":
 		handler = importMssHandler
 	case "plate":
 		handler = importPlateHandler
+	case "plugs":
+		handler = importPlugsHandler
 	case "slant":
 		handler = importSlantHandler
 	case "sporePrint":
@@ -798,31 +800,31 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		handler = updateAgarRecipeHandler
 	case "bag":
 		handler = updateBagHandler
+	case "fruit":
+		handler = updateFruitHandler
+	case "fruitingChamber":
+		handler = updateFruitingChamberHandler
 	case "grainBatch":
 		handler = updateGrainBatchHandler
+	//case "grainWaterJar": // TODO: enable?
+	//	handler = updateGrainWaterJarHandler
+	case "jar":
+		handler = updateJarHandler
+	case "jarRecipe":
+		handler = updateJarRecipeHandler
 	case "lc":
 		handler = updateLiquidCultureHandler
 	case "lcRecipe":
 		handler = updateLcRecipeHandler
 	case "lcSyringe":
 		handler = updateSyringeHandler
-	case "plugs":
-		handler = updatePlugsHandler
-	case "fruit":
-		handler = updateFruitHandler
-	case "fruitingChamber":
-		handler = updateFruitingChamberHandler
-	case "jar":
-		handler = updateJarHandler
-	case "jarRecipe":
-		handler = updateJarRecipeHandler
 	case "mss":
 		handler = updateMssHandler
 	case "pcRun":
 		handler = updatePcRunHandler
 	case "plate":
 		handler = updatePlateHandler
-	case "plug":
+	case "plugs":
 		handler = updatePlugsHandler
 	case "project":
 		handler = updateProjectHandler
@@ -846,7 +848,7 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		handler = updateSubstrateBatchHandler
 	case "transfer":
 		handler = updateTransferHandler
-	//case "user":             handler = updateUserHandler
+	//case "user":             handler = updateUserHandler // TODO: ??????
 	case "waterJar":
 		handler = updateWaterJarHandler
 	default:

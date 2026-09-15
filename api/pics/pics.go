@@ -37,7 +37,7 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 	for _, prefix := range prefixPath {
 		resolvedPrefix = resolvedPrefix + prefix + "/"
 	}
-	for i := 0; i < 10; i++ { // TODO: max iterations? jitter?
+	for range 10 { // TODO: max iterations? jitter?
 		name, err := uuid.NewRandom()
 		if err != nil {
 			return "", err

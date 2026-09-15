@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -65,16 +64,16 @@ func (M MSS) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    M.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: M.SubspeciesOptionalField,
-		KnownFruitableField:     KnownFruitableField{utils.Pointer(false)},
+		KnownFruitableField:     KnownFruitableField{new(false)},
 		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{utils.Pointer(Generation(0))},
-			GenSinceFruitOrSpore: utils.Pointer(Generation(0)),
+			GenSporeField:        GenSporeField{new(Generation(0))},
+			GenSinceFruitOrSpore: new(Generation(0)),
 		},
 	}, nil
 }
 
 func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
+	return new(Generation(0)), new(Generation(0))
 }
 
 func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {

@@ -15,7 +15,7 @@ import (
 
 type User struct {
 	Email string    `bson:"_id" json:"_id"`
-	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
+	Perms UserPerms `bson:"perms,omitempty" json:"perms"` // PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
 	// All can view?
 }
 
@@ -179,10 +179,10 @@ const (
 
 type UserProjectPerm bool // Always referenced as a pointer, where true===admin, false===write, and nil===read
 func UserProjectAdmin() *UserProjectPerm {
-	return utils.Pointer(UserProjectPerm(true))
+	return new(UserProjectPerm(true))
 }
 func UserProjectWrite() *UserProjectPerm {
-	return utils.Pointer(UserProjectPerm(false))
+	return new(UserProjectPerm(false))
 }
 func UserProjectRead() *UserProjectPerm {
 	return nil

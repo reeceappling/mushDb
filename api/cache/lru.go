@@ -1,12 +1,18 @@
 package cache
 
-import "sync"
+import (
+	"sync"
+)
 
 //type LruLockless struct {
 //	ct             int
 //	maxSize        int
 //	m              map[string]*cacheNode
 //	newest, oldest *cacheNode
+//}
+
+//func raceRead(ctx context.Context, do ...func()([]byte, error))(bs []byte, err error){
+//	// TODO: this?
 //}
 
 type LRU struct { // TODO: EXPAND USAGE OF LRU CACHE TO OTHER THINGS, OR CONSIDER USING REDIS (PROBABLY REDIS)

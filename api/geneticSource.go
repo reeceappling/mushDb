@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -97,11 +96,11 @@ func childGensForParent(parent geneticSource) (parentInfo GeneticParentInfo, gen
 	}
 	switch parent.SourceType() {
 	case MssSourceType:
-		genSpore = utils.Pointer(Generation(0))
-		genFruitSpore = utils.Pointer(Generation(0))
+		genSpore = new(Generation(0))
+		genFruitSpore = new(Generation(0))
 	case FruitSourceType:
 		genSpore = parentInfo.GenSinceSpore.Next()
-		genFruitSpore = utils.Pointer(Generation(0))
+		genFruitSpore = new(Generation(0))
 	default:
 		genSpore = parentInfo.GenSinceSpore.Next()
 		genFruitSpore = parentInfo.GenSinceFruitOrSpore.Next()

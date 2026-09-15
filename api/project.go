@@ -530,7 +530,7 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 	wc := writeConc()
 	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
-	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		defer sess.EndSession(ctx)
 		// update the users (if needed)
 		if _, e := updateUsers(sessCtx); e != nil {
@@ -582,7 +582,7 @@ func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseW
 	wc := writeConc()
 	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
-	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		defer sess.EndSession(ctx)
 		sessDb := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
 		// TODO:

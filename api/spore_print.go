@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
@@ -154,7 +153,7 @@ func (sp SporePrint) createSporeSwabInTxn(ctx mongo.SessionContext, swabNotes, x
 	swab := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&sp.Id},
-		ParentTypeField:                   ParentTypeField{utils.Pointer("sporePrint")},
+		ParentTypeField:                   ParentTypeField{new("sporePrint")},
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      sp.SpeciesField,
 		SubspeciesOptionalField:           sp.SubspeciesOptionalField,
@@ -239,12 +238,12 @@ func (sp SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sp.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sp.SubspeciesOptionalField,
-		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
+		GenerationsFields:       GenerationsFieldFor(new(Generation(0))),
 	}, nil
 }
 
 func (sp SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
+	return new(Generation(0)), new(Generation(0))
 }
 
 func (sp SporePrint) id() []byte {
@@ -278,14 +277,14 @@ func initializeSporePrints(ctx context.Context) error {
 			MainCollectionIdField:             MainCollectionIdField{exSporePrint},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
 			CreationDateField:                 CreationDateField{exampleTime},
-			SporePrintColorField:              SporePrintColorField{utils.Pointer(SpColorBlack)},
-			SporePrintDensityField:            SporePrintDensityField{utils.Pointer(SpDensityAvg)},
+			SporePrintColorField:              SporePrintColorField{new(SpColorBlack)},
+			SporePrintDensityField:            SporePrintDensityField{new(SpDensityAvg)},
 			SpeciesField:                      SpeciesField{testEntryStringId},
 			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 			PicsField:                         PicsField{exPics},
 			SaleField:                         SaleField{&exAltId},
 			DisposedField:                     DisposedField{&exampleTime},
-			MostRecentImageField:              MostRecentImageField{utils.Pointer(exPics[0])},
+			MostRecentImageField:              MostRecentImageField{new(exPics[0])},
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 		}
@@ -647,7 +646,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {

@@ -197,7 +197,7 @@ func (h *Handler) SetLivenessCheck(check func() bool) {
 func (h *Handler) LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode int = http.StatusOK
 	w.Header().Set("Content-Type", "application/json")
-	out := map[string]interface{}{
+	out := map[string]any{
 		"status": checkers.LivenessAlive,
 	}
 	if !h.livenessCheck() {
@@ -215,13 +215,13 @@ func (h *Handler) LivenessHandler(w http.ResponseWriter, r *http.Request) {
 // ReadinessHandler handles readiness probe requests
 // Checks all registered dependencies before reporting ready
 func (h *Handler) ReadinessHandler(w http.ResponseWriter, r *http.Request) {
-	var out interface{}
+	var out any
 	var statusCode = http.StatusOK
 	w.Header().Set("Content-Type", "application/json")
 	// Check if marked as not ready
 	if !h.Ready() {
 		statusCode = http.StatusServiceUnavailable
-		out = map[string]interface{}{
+		out = map[string]any{
 			"status":  checkers.ReadinessNotReady,
 			"message": "application not ready",
 		}
@@ -241,7 +241,7 @@ func (h *Handler) ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 // StartupHandler handles startup probe requests
 func (h *Handler) StartupHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode = http.StatusOK
-	out := map[string]interface{}{
+	out := map[string]any{
 		"status": checkers.StartupStatusStarted,
 	}
 	w.Header().Set("Content-Type", "application/json")

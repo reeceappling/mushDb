@@ -102,6 +102,9 @@ const defaultHttpPort = 8080
 const loginPath = "/login"
 
 func main() {
+	// TODO: When to run runtime.GC() ?
+	// TODO: runtime.GoMaxProcs, maybe utilizing cpuid.CPU or https://pkg.go.dev/go.uber.org/automaxprocs
+	// TODO: this is the default: runtime.GOMAXPROCS(runtime.NumCPU())
 	ctx := context.Background()
 	// TODO: SETUP Health check service (also for telemetry, db, webserver, caches?, mainServer, rfidStuff). See /api/probes/health
 	// Set up OpenTelemetry.// TODO: DISABLE FOR NOW
@@ -285,6 +288,7 @@ func main() {
 
 	// Proxy combo middlewares
 	webAuthAdminMiddleware := rfid.GetAuthService(ctx).AuthAdminOrDenyMiddleware
+	// TODO: auth admin or (auth user accessing themselves or deny) middleware
 
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	unAuthedProxied := ctxMiddleware(webProxyHandler)
@@ -318,6 +322,7 @@ func main() {
 	http.Handle("/auth/{provider}", Middlewares(tracerMiddleware("/auth/{provider}"), OptionsGetOnly, corsAuthRateLimit)(authProviderHandler))   // TODO: getOnly ok?
 	http.Handle("/auth/{provider}/callback", Middlewares(tracerMiddleware("/auth/{provider}/callback"), corsAuthRateLimit)(authCallbackHandler)) // TODO: GET or POST?
 	// Biometrics endpoints TODO: (maybe add biometric provider?)
+	// TODO: server stores public key, encrypts a secret and sends to user. User uses their private key (unlocked by fingerprint) to decrypt the message and send it back.
 	//http.Handle("/biometrics/fingerprint/register-start", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(BeginFingerprintRegistration))))   // TODO: change middlewares and handler
 	//http.Handle("/biometrics/fingerprint/register-end", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(FinishFingerprintRegistration))))    // TODO: change middlewares and handler
 	//http.Handle("/biometrics/fingerprint/register-challenge", CorsAuthMiddleware(rateLimitCtxMiddleware(biometricFingerprintRegisterChallengeHandler))) // TODO: change middlewares and handler
@@ -990,7 +995,7 @@ var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 			if ct != 0 {
 				sb.Write([]byte("|"))
 			}
-			sb.Write([]byte(fmt.Sprintf("%s=%s", k, v)))
+			sb.Write(fmt.Appendf(nil, "%s=%s", k, v))
 			ct++
 		}
 		return sb.String()
@@ -1617,7 +1622,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		if !user.IsAdmin() {
 			if user.Email != out.Email {
-				http.Error(w, "non-admins cannot view users", http.StatusForbidden)
+				http.Error(w, "non-admins cannot view other users", http.StatusForbidden)
 				return
 			}
 		}
@@ -1627,7 +1632,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			return
 		}
 	// Cases which are alt colls with base58->binary ids
-	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
+	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer": // TODO: grainWaterJar?
 		var possibleName = id
 		var failedToGetAltId = false
 		altId, err := rfid.StandardizeAltCollectionId(id)

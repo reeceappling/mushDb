@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/logging"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
@@ -131,7 +130,7 @@ func (rw *MockRfidSvc) ReadRfid(ctx context.Context, readerName shared.RfidReade
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	if id == "1" { // TODO: DO THIS ELSEWHERE!
 		println("making ID 1!")
-		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
+		return new(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
 	realId, err := Base58Str(id).ToMainCollectionId()
 	if err != nil {

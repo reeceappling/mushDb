@@ -403,7 +403,7 @@ func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor)
 				//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
 				//}
 				// If item is permissioned, ensure the user can read it
-				permedItem, ok := interface{}(result).(Permissioned)
+				permedItem, ok := any(result).(Permissioned)
 				if ok {
 					acl := permedItem.Permissions()
 					// If user cannot read or write, do not add
@@ -476,7 +476,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 			//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
 			//}
 			// If item is permissioned, ensure the user can read it
-			permedItem, ok := interface{}(result).(Permissioned)
+			permedItem, ok := any(result).(Permissioned)
 			if ok {
 				acl := permedItem.Permissions()
 				// If user cannot read or write, do not add
@@ -581,7 +581,7 @@ type contamForm struct {
 func (cf contamForm) convert() Contamination {
 	var loc *ImageLocation = nil
 	if cf.Location != nil {
-		loc = utils.Pointer(ImageLocation(*cf.Location))
+		loc = new(ImageLocation(*cf.Location))
 	}
 	return Contamination{
 		ContaminationLessLocation: ContaminationLessLocation{
@@ -732,7 +732,7 @@ var (
 	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}
 	exampleSpecies       = "Beech"
-	exampleSubspecies    = utils.Pointer("Brown Beech")
+	exampleSubspecies    = new("Brown Beech")
 	exGenSinceSpore      = Generation(2)
 	exGenSinceFruitSpore = Generation(1)
 	exParentType         = "plate"
@@ -762,8 +762,8 @@ var (
 	exUserNoProjectWrite = "2@example.com"
 	exProjPerms          = map[string]*bool{
 		string(exUserRead[:]):  nil,
-		string(exUserWrite[:]): utils.Pointer(false),
-		string(exUserAdmin[:]): utils.Pointer(true),
+		string(exUserWrite[:]): new(false),
+		string(exUserAdmin[:]): new(true),
 	}
 	exAcl = ACL{
 		Users: map[string]bool{
@@ -791,7 +791,7 @@ var (
 		},
 		BlanketPerm: RWPermRead(),
 	}
-	exBool                     = utils.Pointer(true)
+	exBool                     = new(true)
 	exPicLoc                   = "test.jpg" // Uses a picture from another site...
 	exPicWithNotesLessLocation = PicWithNotesLessLocation{
 		RequiredTimeField: exReqTimeField,

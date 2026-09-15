@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -160,7 +159,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		PicsModsForChild(p).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
-		withParent(utils.Pointer(from.DbId())).
+		withParent(new(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -238,13 +237,13 @@ func initializePlates(ctx context.Context) error {
 			id := mainCollIdForint(permInt)
 			platesMade[id.AsBase58()] = testAclStrings[i]
 			var tempCoverage = &i
-			var tempBool = utils.Pointer(false)
+			var tempBool = new(false)
 			switch i {
 			case 1:
 				tempCoverage = nil
 				tempBool = nil
 			case 2:
-				tempBool = utils.Pointer(true)
+				tempBool = new(true)
 			default:
 				// Do nothing different
 			}
@@ -692,7 +691,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		importedPicNotes := []Note{} // TODO: ok?
-		importedPic = utils.Pointer(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = new(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var condensCovSealed *int = nil
 	var gen *Generation = nil

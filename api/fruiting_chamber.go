@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -104,8 +103,8 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 	}
 	upd, err := mods.
 		withInnoc(xfer).
-		withParentType(utils.Pointer(xfer.FromType)).
-		withParent(utils.Pointer(from.DbId())).
+		withParentType(new(xfer.FromType)).
+		withParent(new(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -188,7 +187,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 			ContaminationsField:               ContaminationsField{exContams},
 			MostRecentImageField:              MostRecentImageField{&exPics[0]},
 			FlushesField:                      FlushesField{exPics},
-			SaleField:                         SaleField{utils.Pointer(exAltId)},
+			SaleField:                         SaleField{new(exAltId)},
 			DisposedField:                     DisposedField{},
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
@@ -365,7 +364,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	if data.Generation < 1 {
 		http.Error(w, "generation must be positive", http.StatusBadRequest)

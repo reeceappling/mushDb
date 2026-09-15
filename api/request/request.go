@@ -1,10 +1,11 @@
 package request
 
 import (
+	context0 "context"
+
 	"github.com/google/uuid"
 	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/net/context"
 )
 
 const Path string = "request-path"
@@ -17,7 +18,7 @@ const nowKey ctxKey = "request.now.unix"
 const path = ctxKey(Path)
 const id = ctxKey(Id)
 
-func GetPath(ctx context.Context) *string { // TODO: USE!
+func GetPath(ctx context0.Context) *string { // TODO: USE!
 	requestPath, ok := ctx.Value(path).(string)
 	if !ok {
 		return nil
@@ -25,10 +26,10 @@ func GetPath(ctx context.Context) *string { // TODO: USE!
 	return &requestPath
 }
 
-func SetPath(ctx context.Context, requestPath string) context.Context {
-	return context.WithValue(ctx, path, requestPath)
+func SetPath(ctx context0.Context, requestPath string) context0.Context {
+	return context0.WithValue(ctx, path, requestPath)
 }
-func GetId(ctx context.Context) *string { // TODO: USE!
+func GetId(ctx context0.Context) *string { // TODO: USE!
 	idFromCtx, ok := ctx.Value(id).(string)
 	if !ok {
 		return nil
@@ -36,23 +37,23 @@ func GetId(ctx context.Context) *string { // TODO: USE!
 	return &idFromCtx
 }
 
-func WithId(ctx context.Context, optionalId *string) context.Context {
+func WithId(ctx context0.Context, optionalId *string) context0.Context {
 	var newId string
 	if optionalId != nil {
 		newId = *optionalId
 	} else {
 		newId = uuid.New().String()
 	}
-	return context.WithValue(ctx, id, newId)
+	return context0.WithValue(ctx, id, newId)
 }
 
 // UnixTime grabs the unixTime from the context if it is set,
 // but otherwise calculates it and sets it on the context, also returning the time.
-func UnixTime(ctx context.Context) (context.Context, unix.Time) {
+func UnixTime(ctx context0.Context) (context0.Context, unix.Time) {
 	t, ok := ctx.Value(nowKey).(unix.Time)
 	if !ok {
 		t = unix.TimeForNow()
-		return context.WithValue(ctx, nowKey, t), t
+		return context0.WithValue(ctx, nowKey, t), t
 	}
 	return ctx, t
 }

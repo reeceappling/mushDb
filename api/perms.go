@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"golang.org/x/exp/maps"
 	"net/http"
@@ -17,9 +16,9 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 	var getAllProjectsCompleteArg *bool = nil
 	if complete != "" {
 		if complete == "true" {
-			getAllProjectsCompleteArg = utils.Pointer(true)
+			getAllProjectsCompleteArg = new(true)
 		} else if complete == "false" {
-			getAllProjectsCompleteArg = utils.Pointer(false)
+			getAllProjectsCompleteArg = new(false)
 		}
 	}
 

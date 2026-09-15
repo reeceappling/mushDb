@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/exp/maps"
+	maps0 "maps"
 	"strings"
 )
 
@@ -209,9 +210,7 @@ func cloneMap[T comparable, U any](m map[T]U) map[T]U {
 		return nil
 	}
 	out := make(map[T]U, len(m))
-	for key, val := range m {
-		out[key] = val
-	}
+	maps0.Copy(out, m)
 	return out
 }
 

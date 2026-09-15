@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
@@ -104,7 +103,7 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 		PicsModsForChild(j).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
-		withParent(utils.Pointer(from.DbId())).
+		withParent(new(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withKnownFruitable(parentInfo.KnownFruitable).
@@ -333,7 +332,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPic = new(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 
 	var gen *Generation = nil

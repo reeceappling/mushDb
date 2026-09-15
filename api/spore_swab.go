@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -57,12 +56,12 @@ func (sw SporeSwab) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
-		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
+		GenerationsFields:       GenerationsFieldFor(new(Generation(0))),
 	}, nil
 }
 
 func (sw SporeSwab) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
+	return new(Generation(0)), new(Generation(0))
 }
 
 func (sw SporeSwab) id() []byte {

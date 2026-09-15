@@ -267,7 +267,7 @@ func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId,
 		return "", errors.Join(err, errors.New("failed to check session with email"))
 	}
 
-	for i := 0; i < maxSessionIdGenerationTries; i++ {
+	for range maxSessionIdGenerationTries {
 		var temp SessionId
 		temp, err = generateSessionId()
 		if err != nil {
@@ -318,26 +318,22 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 	wg := &sync.WaitGroup{}
 	if sess.Expiry.Before(time.Now()) {
 		var e error = nil
-		wg.Add(1)
-		go func() { // TODO: seems unnecessary
+		wg.Go(func() { // TODO: seems unnecessary
 			e = srv.deleteSession(sess.Data.Email)
 			if e != nil {
 				println("failed to delete expired session: " + err.Error())
 				// TODO; what here?
 			}
-			wg.Done()
-		}()
+		})
 
 		wg.Wait()
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrExpired)
 	}
 	if refreshTTL {
 		result := genericsessions.Session[ResolvedUserPerms]{}
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			result = srv.setRefreshedSession(id, sess)
-			wg.Done()
-		}()
+		})
 		wg.Wait()
 		return utils.ResultFrom(result, nil)
 	}
@@ -379,7 +375,7 @@ func (srv *AuthService) createSessionFor(authinf ResolvedUserPerms) (SessionId, 
 }
 
 func (srv *AuthService) newFakeEmail() (string, error) {
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		fakeEmailBytes := make([]byte, 30)
 		_, err := rand.Read(fakeEmailBytes)
 		if err != nil {

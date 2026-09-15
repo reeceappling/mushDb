@@ -293,7 +293,7 @@ func newNote(tim unix.Time, txt string) Note {
 }
 
 type NotesUpdateField struct {
-	Notes AllEntries[Note] `json:"notes,omitempty"`
+	Notes AllEntries[Note] `json:"notes"`
 }
 
 func (nuf NotesUpdateField) NoteChanges() AllEntries[Note] {
@@ -545,13 +545,13 @@ func (upd *Mods) Add(sets, unsets, pushes, pulls []bson.E) *Mods {
 	return upd
 }
 
-func (upd *Mods) Set(key string, value interface{}) *Mods {
+func (upd *Mods) Set(key string, value any) *Mods {
 	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
 	return upd
 }
 
 // TODO: ensure ok
-func (upd *Mods) UpdateValueIfNeeded(key string, future, current interface{}) *Mods { // TODO: interface ok?
+func (upd *Mods) UpdateValueIfNeeded(key string, future, current any) *Mods { // TODO: interface ok?
 	return updateValueIfNeeded(upd, key, future, current)
 }
 
@@ -560,7 +560,7 @@ func (upd *Mods) Unset(key string) *Mods { // TODO: ensure works
 	return upd
 }
 
-func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok, or should be slice?
+func (upd *Mods) Push(key string, value any) *Mods { // TODO: interface ok, or should be slice?
 	upd.pushes = append(upd.pushes, bson.E{Key: key, Value: value})
 	return upd
 }
