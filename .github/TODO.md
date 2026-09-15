@@ -207,7 +207,7 @@
 - [ ] Hidden links to honeypot bots? (like a hidden link to a page that is not linked anywhere else, and if a bot hits it, we can trap or ban it)
   - [ ] Check bots headers? cookies? user-agent? mouse movements?
   - [ ] Captchas for what we think are bots?
-- [ ] Monetization - Not really important whatsoever
+- [ ] Monetization - Not really important whatsoever, and probably dont want to monetize the site at all anytime soon
   - [ ] Offer alternatives for monetization, such as between
     - [ ] Ads
     - [ ] Donations
@@ -220,7 +220,7 @@
   - [ ] Max depth from root
   - [ ] Max width/depth from leaf
 - [x] LRU Cache for images! See /api/cache/lru.go for what I have started on
-  - [ ] Ensure this is working correctly
+  - [x] Ensure this is working correctly
 - [ ] Try to switch all Node things to Bun. In theory could go 20x faster than Node, but may require some extra work to get it working properly. May only want to use bun for dev?
 - [ ] User/Pass login with goth sessions. Already started putting this together.
 - [ ] React Native app for mobile devices
@@ -362,6 +362,10 @@
         - [x] Add burst grains
         - [x] Allow PC to be optional
     - [x] List Page
+  - [ ] Grain Water Jar
+    - [ ] Display page
+    - [ ] Create page
+    - [ ] List Page
   - [x] Jar
     - [x] Display page
       - [x] fix wetness and burst grains areas
