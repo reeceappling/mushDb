@@ -1,20 +1,20 @@
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 .flexedArea {
     display: flex;
-    gap: 0.25rem; /* TODO: ok? */
+    gap: 0.25rem;
     flex-wrap: wrap; /* Allows items to move to a new line */
     justify-content: space-between;
-    align-items: flex-start; /* TODO: ok? https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
+    align-items: flex-start;
     align-content: flex-start;
-    max-width: 100%; /* TODO: was width*/
+    max-width: 100%;
     & > * {
         flex: 1 0 auto;
         /*border: 1px solid rebeccapurple; TODO: any borders?*/
@@ -23,9 +23,9 @@ div {
             justify-content: center;
             row-gap: var(--smallestSpace);
             & > *, & .disposedArea, & > .dateHolder {
-                display: block;/* TODO: ensure ok*/
+                display: block;
                 & > * {
-                    display: inline-block;/* TODO: ensure ok*/
+                    display: inline-block;
                 }
                 &.dateEditable {
                     display: inline-block;

@@ -10,7 +10,7 @@
   grid-template-rows: 20px 1fr 20px;
   align-items: center;
   justify-items: center;
-  min-height: 100svh;
+  /*min-height: 100svh; TODO: del?*/
   padding: 80px;
   gap: 64px;
   font-family: var(--font-geist-sans);
@@ -93,16 +93,26 @@ a.secondary {
 }
 
 .footer {
+  margin: 2em;
+  width: 100%;
   grid-row-start: 3;
   display: flex;
   gap: 24px;
+  align-items: center;
+  justify-content: center;
 }
 
-.footer a {
+.footer > a {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
+/*.footer > div {*/
+/*  !*display: flex; TODO: probably not right, but might be a better start*!*/
+/*  !*align-items: center;*!*/
+/*  !*gap: 8px;*!*/
+/*}*/
 
 .footer img {
   flex-shrink: 0;

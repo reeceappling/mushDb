@@ -1,23 +1,21 @@
 FROM golang:latest AS builder
+# TODO: ?
 #FROM --platform=linux/arm64 golang:latest AS builder
 
 WORKDIR /app
 COPY bin/mushApi server
-# TODO: enable the following to stop needing the main_run script all the time...
-#COPY ./go.mod go.mod
-#COPY ./go.sum go.sum
-#COPY ./api /api/
-#COPY ./main.go main.go
-#
-## TODO: ensure next line ok
+# TODO: enable the following to stop needing the main_run script all the time... (will need fixing)
+#COPY go.mod go.sum ./
+#COPY main.go ./
+#COPY api/ ./api/
 #RUN GOOS=linux GOARCH=arm64 go build -o server .
+RUN chmod 777 server
+
 
 FROM alpine:latest
 #FROM --platform=linux/arm64 alpine:latest
 
-# TODO: workdir ok?
 WORKDIR /root/s
 COPY --from=builder /app/server .
-RUN chmod 777 server
-EXPOSE 443
+#EXPOSE 443 not needed because of docker compose
 CMD ["./server"]

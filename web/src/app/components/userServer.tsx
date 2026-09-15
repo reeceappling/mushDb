@@ -1,27 +1,40 @@
-import {Note} from "@/app/components/formSubcomponents/notes";
-import {EntryPerms, IsValidEntryPermSubset, IsValidUserIdPair} from "@/app/components/perms";
-import {IsBool, IsString, OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
+import { IsString, OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
 
 
 export function TestUserOk(){
-    const a: UserData = {
+    return new UserData({
         _id: "(EMAIL 1)",
         perms: {projects:["projA","projB"]},
-    }
-    return a
+    })
 }
 
 export function TestUserOk2(){
-    const a: UserData = {
+    return new UserData({
         _id: "(EMAIL 2)",
         perms: {projects:["projA","projB"]},
-    }
-    return a
+    })
 }
 
 export interface UserData {
     _id: string // This is username
     perms?: UserPerms
+}
+export class UserData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<UserData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "user"
+    }
+    public description(): string {
+        return `This is a user's personal page. Information omitted for security reasons` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 export interface UserPerms {

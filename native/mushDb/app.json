@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "mushDb", "note_name": "ENSURE OK! -----------------------------------------------------------------------",
+    "slug": "mushDb", "note_slug": "ENSURE OK! -----------------------------------------------------------------------",
+    "version": "1.0.0", "note_version": "ENSURE OK! ------------------------------------------------------------------",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png", "note_icon": "FIXME! ---------------------------------------------------------",
+    "scheme": "mush", "note_scheme": "Custom url scheme for opening app via url like mush:// -------------------------",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE", "note_backgroundColor": "FIXME! ------------------------------------------------",
+        "foregroundImage": "./assets/images/android-icon-foreground.png", "note_foregroundImage": "FIXME! ------------",
+        "backgroundImage": "./assets/images/android-icon-background.png", "note_backgroundImage": "FIXME! ------------",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png", "note_monochromeImage": "FIXME! -------------"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+        "expo-router",
+        [
+          "expo-splash-screen",
+          {
+            "backgroundColor": "#208AEF", "note_backgroundColor": "FIXME! --------------------------------",
+            "image": "./assets/images/splash-icon.png", "note_image": "FIXME! --------------------------------",
+            "imageWidth": 76, "note_imageWidth": "FIXME! --------------------------------"
+          }
+        ],
+        [
+          "expo-image-picker",
+          {
+            "photosPermission": "The app accesses your photos to let you select pictures.",
+            "cameraPermission": "The app accesses your camera to let you take pictures."
+          }
+        ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
