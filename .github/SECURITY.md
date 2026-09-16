@@ -7,12 +7,12 @@ Use the table below to see which versions of this project are currently receivin
 
 | Version | Supported          |
 |---------| ------------------ |
-| 0.0.1   | :white_check_mark: |
-| 2.0.x   | :x:                |
-| < 1.9   | :x:                |
+| 0.0.2   | :white_check_mark: |
+| 0.0.1   | :x:                |
+| < 0.0.1 | :x:                |
 
 ## Reporting a Vulnerability
 We take the security of our software seriously. If you believe you have found a security vulnerability, please do **not** open a public issue.
 
 ### How to Report
-1. Use the [GitHub Private Vulnerability Reporting](
+1. Use the [GitHub Private Vulnerability Reporting]()# TODO: FIXME 
