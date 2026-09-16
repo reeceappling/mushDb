@@ -4,10 +4,12 @@ package api
 // go:generate goGenerator/buildAndGenerate.sh
 
 var (
+	// TODO: change to []X = []X{&a,&b,...}
 	_ MainCollectionItem                       = &Bag{}
 	_ MainCollectionItem                       = &Fruit{}
 	_ MainCollectionItem                       = &FruitingChamber{}
 	_ MainCollectionItem                       = &GrainJar{}
+	_ MainCollectionItem                       = &GrainWaterJar{}
 	_ MainCollectionItem                       = &LcSyringe{}
 	_ MainCollectionItem                       = &LiquidCulture{}
 	_ MainCollectionItem                       = &MSS{}
@@ -35,7 +37,6 @@ var (
 	_ AltCollectionItem[AlternateCollectionId] = &AgarBatch{}
 	_ AltCollectionItem[AlternateCollectionId] = &AgarRecipe{}
 	_ AltCollectionItem[AlternateCollectionId] = &GrainBatch{}
-	_ AltCollectionItem[AlternateCollectionId] = &GrainWaterJar{}
 	_ AltCollectionItem[AlternateCollectionId] = &LcRecipe{}
 	_ AltCollectionItem[AlternateCollectionId] = &PCRun{}
 	_ AltCollectionItem[string]                = &Project{}

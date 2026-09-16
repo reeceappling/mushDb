@@ -27,7 +27,7 @@ func GetFilePath(ctx context.Context) string {
 	return ctx.Value(filePathCtxKey).(string)
 }
 
-func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
+func SavePicFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
 	// TODO: save file to s3 if needed (probably not)
 	filePath := GetFilePath(ctx)
 	if filePath == "" {
@@ -68,33 +68,26 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 	return "", errors.New("failed to find a new fileName")
 }
 
-func GetFile(ctx context.Context, imgSubPath string) (bytes []byte, err error) {
-	path := filepath.Join(GetFilePath(ctx), imgSubPath)
+func getFile(pathPrefix, path string) (bytes []byte, err error) {
+	fullPath := filepath.Join(pathPrefix, path)
 	// Try to get from LRU cache first
-	if bs, found := lruCache.Get(path); found {
+	if bs, found := lruCache.Get(fullPath); found {
 		return bs, nil
 	}
 	// Cache miss
-	return os.ReadFile(path)
+	bytes, err = os.ReadFile(fullPath)
+	if err != nil {
+		return bytes, err
+	}
+	_ = lruCache.Add(fullPath, bytes)
+	return bytes, err
+}
+func GetStaticFile(path string) (bytes []byte, err error) {
+	return getFile("/staticFiles", path)
+}
 
-	//picsDir := GetFilePath(ctx)
-	//bytes, err = os.ReadFile(filepath.Join(picsDir, imgSubPath))
-	//if err != nil {
-	//	if errors.Is(err, os.ErrNotExist) {
-	//		err = errorreference.ErrorNotFound
-	//		//// TODO: READ FROM s3 if needed?
-	//		//bytes, err = s3.NewFileReader().Read(ctx, imgSubPath) // TODO: ensure ok
-	//		//if err != nil {
-	//		//	if errors.Is(err, errorreference.ErrorNotFound) {
-	//		//		println("file does not exist locally or in s3!") // TODO: fix
-	//		//		return nil, ErrNotFound
-	//		//
-	//		//	}
-	//		//	return nil, err
-	//		//}
-	//	}
-	//}
-	//return bytes, err
+func GetPic(ctx context.Context, imgSubPath string) (bytes []byte, err error) {
+	return getFile(GetFilePath(ctx), imgSubPath)
 }
 
 func DeleteFiles(ctx context.Context, filenamesWithPrefixPaths ...string) error {

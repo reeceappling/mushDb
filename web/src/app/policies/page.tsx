@@ -29,8 +29,9 @@ export default async function Page() {
         <h1>{"Policies"}</h1>
         <ErrorDisplay err={err}/>
         <ul>
-            <li><a href={"/cookies"}>{"Cookies Policy"}</a></li>
-            <li><a href={"/privacy"}>{"Privacy Policy"}</a></li>
+            <li><a href={"/policies/cookies"}>{"Cookies Policy"}</a></li>
+            <li><a href={"/policies/privacy"}>{"Privacy Policy"}</a></li>
+            <li><a href={"/policies/security"}>{"Security Policy"}</a></li>{/* TODO: ensure list updated!*/}
         </ul>
     </>
     return <PageWrapper props={{pageType: "policies", readers: readers}}>

@@ -454,7 +454,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 				// Already wrote
 				return
 			}
-			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "bag", string(b58id), "img")
+			newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "bag", string(b58id), "img")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

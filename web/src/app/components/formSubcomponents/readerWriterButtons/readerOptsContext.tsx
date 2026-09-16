@@ -146,54 +146,57 @@ export function useRfidReaderContext() {
         );
     }
     // try to set the most recently used reader on spin-up?
-    const getUserMostRecentlyUsedReader = new Promise<string>((accept,reject)=>{
-        // if (detailedConsent === null || detailedConsent === undefined) {
-        //     reject("No consent for functional storage provided")
-        //     return
-        // } else {
-        //     // if (detailedConsent.FunctionalCookies.consented) {
-        //     //     const c:string |undefined|null= cookies.mostRecentRfidReader
-        //     //     if (!(c===null||c===undefined||c==="")){
-        //     //         accept(c)
-        //     //         return
-        //     //     }
-        //     // }
-        //     // if (detailedConsent.FunctionalLocalStorage.consented) {
-        //     //     // Check Local storage
-        //     //     if (typeof window !== 'undefined') {
-        //     //         let val = localStorage.getItem('mostRecentRfidReader')
-        //     //         if (val!==null){
-        //     //             accept(val)
-        //     //             return
-        //     //         }
-        //     //     }
-        //     // }
-        //     // if (detailedConsent.FunctionalSessionStorage.consented) {
-        //     //     // Check Session Storage
-        //     //     if (typeof window !== 'undefined') {
-        //     //         let val = sessionStorage.getItem('mostRecentRfidReader')
-        //     //         if (val!==null){
-        //     //             accept(val)
-        //     //             return
-        //     //         }
-        //     //     }
-        //     // }
-            reject("nothing found in storage or not allowed")
-            return
-        //}
-    })
-    getUserMostRecentlyUsedReader.then((reader)=>{ // TODO: validate works
-        // TODO: ensure value is in options
-        if (context.state.options.includes(reader)){
-            context.dispatch({
-                type: ActionTypes.SET_READER,
-                payload: reader,
-            });
-        } else {
-            throw "users historical reader ("+reader+") not an option"
-        }
-    }).catch((e)=>{
-        console.error(JSON.stringify(e));
-    })
+    // const getUserMostRecentlyUsedReader = new Promise<string>((accept,reject)=>{ // TODO:???
+    //     // if (detailedConsent === null || detailedConsent === undefined) {
+    //     //     reject("No consent for functional storage provided")
+    //     //     return
+    //     // } else {
+    //     //     // if (detailedConsent.FunctionalCookies.consented) {
+    //     //     //     const c:string |undefined|null= cookies.mostRecentRfidReader
+    //     //     //     if (!(c===null||c===undefined||c==="")){
+    //     //     //         accept(c)
+    //     //     //         return
+    //     //     //     }
+    //     //     // }
+    //     //     // if (detailedConsent.FunctionalLocalStorage.consented) {
+    //     //     //     // Check Local storage
+    //     //     //     if (typeof window !== 'undefined') {
+    //     //     //         let val = localStorage.getItem('mostRecentRfidReader')
+    //     //     //         if (val!==null){
+    //     //     //             accept(val)
+    //     //     //             return
+    //     //     //         }
+    //     //     //     }
+    //     //     // }
+    //     //     // if (detailedConsent.FunctionalSessionStorage.consented) {
+    //     //     //     // Check Session Storage
+    //     //     //     if (typeof window !== 'undefined') {
+    //     //     //         let val = sessionStorage.getItem('mostRecentRfidReader')
+    //     //     //         if (val!==null){
+    //     //     //             accept(val)
+    //     //     //             return
+    //     //     //         }
+    //     //     //     }
+    //     //     // }
+    //         reject("nothing found in storage or not allowed")
+    //         return
+    //     //}
+    // })
+    // getUserMostRecentlyUsedReader.then((reader)=>{ // TODO: validate works
+    //     // TODO: ensure value is in options
+    //     if (context.state.options.includes(reader)){
+    //         context.dispatch({
+    //             type: ActionTypes.SET_READER,
+    //             payload: reader,
+    //         });
+    //     } else {
+    //         throw "users historical reader ("+reader+") not an option"
+    //     }
+    // }).catch((e)=>{
+    //     if (JSON.stringify(e) == "nothing found in storage or not allowed"){
+    //         return context
+    //     }
+    //     console.error(JSON.stringify(e));
+    // })
     return context;
 }

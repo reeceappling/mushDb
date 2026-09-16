@@ -374,7 +374,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errSave := pics.SaveFile(ctx, fieldBytes, "slant", string(b58id), "img")
+		newFileNameWithPrefixPath, errSave := pics.SavePicFile(ctx, fieldBytes, "slant", string(b58id), "img")
 		if errSave != nil {
 			err = errSave
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

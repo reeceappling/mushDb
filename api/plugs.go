@@ -338,7 +338,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plugs", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "plugs", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

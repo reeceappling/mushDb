@@ -336,7 +336,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch parts[0] {
 		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "img")
+			newFileNameWithPrefixPath, err := pics.SavePicFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "img")
 			if err != nil {
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
@@ -344,7 +344,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam") // TODO: contam even needed here???
+			newFileNameWithPrefixPath, err := pics.SavePicFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam") // TODO: contam even needed here???
 			if err != nil {
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
@@ -447,7 +447,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(r.Context(), fieldBytes, "stasisTube", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

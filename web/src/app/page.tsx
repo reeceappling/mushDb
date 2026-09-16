@@ -15,7 +15,7 @@ export default async function Page(){
   //export default async function Home() {
   const cookieStore = await cookies()
   const session = cookieStore.get('_gothic_session')
-  const readers = await GetReaderWriterNames()
+  const readers = await GetReaderWriterNames() // Done on the server
   return <PageWrapper props={{pageType: "view", readers: readers}}>
       <div className={styles.page}>
         <main className={styles.main}>
@@ -30,7 +30,7 @@ export default async function Page(){
           />
           <ol>
             <li>
-              Welcome to the homepage for my fungi cultivation tracking website. {/*Get started by editing <code>src/app/page.tsx</code>.*/}
+              {"Welcome to the homepage for my fungi cultivation tracking website."} {/*Get started by editing <code>src/app/page.tsx</code>.*/}
             </li>
             {/* TODO: next line is not working properly!!!!*/}
             <li>{(session===undefined || session.value==="") ? <a href={BaseExternalUrl+"/login"}>{"Login"}</a>:

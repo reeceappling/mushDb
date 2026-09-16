@@ -315,7 +315,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "lc", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "lc", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

@@ -326,7 +326,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		env.LogAlways("checking parts") // TODO: del?
 		switch parts[0] {
 		case "newPic":
-			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
+			newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
@@ -335,7 +335,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
+			newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
@@ -344,7 +344,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newContams[num] = newFileNameWithPrefixPath
 		case "newFlush":
-			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
+			newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)

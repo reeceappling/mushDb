@@ -386,6 +386,9 @@ func main() {
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
 	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options") /*TODO:OptionsGetOnly,*/, rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
 
+	// TODO: static files (make sure security.txt and robots.txt are at the top level! also references to them should be top level!)
+	//http.Handle("/static/{filepath...}", getStaticFileHandler) // TODO: any other middlewares?
+
 	// TODO: after ListenAndServe is called, also set api server health to ok?
 	if err = srv.ListenAndServe(); err != nil {
 		// TODO: set server health to bad?
@@ -1414,7 +1417,7 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "image name must not be blank", http.StatusBadRequest)
 		return
 	}
-	bytes, err := picsRfid.GetFile(ctx, imgSubPath)
+	bytes, err := picsRfid.GetPic(ctx, imgSubPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			//println("file does not exist!") // TODO: fix
@@ -1505,6 +1508,25 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 //				rfid.HandleHttpWriteError(err)
 //			}
 //		})
+//	}
+//
+//	var getStaticFileHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//		ctx := r.Context()
+//		bs, err := picsRfid.GetStaticFile(r.PathValue("filepath"))
+//		if err != nil {
+//			env.LogIfDev(ctx, "failed to get static file: "+err.Error())
+//			if errors.Is(err, os.ErrNotExist) {
+//				http.Error(w, "file not found", http.StatusNotFound)
+//			} else {
+//				http.Error(w, "failed to get static file: "+err.Error(), http.StatusInternalServerError)
+//			}
+//		} else {
+//			h := w.Header()
+//			h.Set("Cache-Control", "public")
+//			h.Set("max-age", "86400") // 86400==1day
+//			_, err = w.Write(bs)
+//			rfid.HandleHttpWriteError(err)
+//		}
 //	}
 var getRfidHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) { // TODO: validate works properly!
 	ctx := r.Context()
