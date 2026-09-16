@@ -1,8 +1,8 @@
-div {
+div { /* TODO: see if we can remoe this from other css files??? */
     box-sizing: border-box;
     max-width: 100%;
 }
-*, *::before, *::after {
+*, *::before, *::after { /* TODO: see if we can remoe this from other css files??? */
     box-sizing: border-box;
     max-width: 100%;
 }
@@ -73,18 +73,18 @@ div {
 .idComponent {
     &.topLevelId {
         & > div.idTxt {
-            font-size: 1.9em; /* TODO: ok? */
+            font-size: 1.9em;
         }
         & > div.openMainPageButton {
-            font-size: 1.5em; /* TODO: ok? */
+            font-size: 1.5em;
         }
     }
-    &.nonTopLevelId {
+    &:not(.topLevelId) {
         & > div.idTxt {
             font-size: 1.5em;
         }
         & > div.openMainPageButton {
-            font-size: 1.3em; /* TODO: ok? */
+            font-size: 1.3em;
         }
     }
     & > div { /* text+link and then possibly OpenMainPage component*/

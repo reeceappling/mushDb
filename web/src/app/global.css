@@ -226,7 +226,7 @@ html, body {
 .centerH {
     justify-content: center;
     max-width: fit-content;
-    margin-inline: auto; /* TODO: ew */
+    margin-inline: auto;
     text-align: center;
 }
 
@@ -264,9 +264,7 @@ html, body {
 
 .imageSelector > .preview {
     max-width: 100%;
-    /*width: auto;*/
-    max-height: 50vh;/*var(--aboveAvgImageMaxHeight);*/
-    /*height: 50vh; !* TODO: ok?*!*/
+    max-height: 50vh;
     display: block;
 }
 
@@ -340,7 +338,7 @@ a {
         width: 30%;
     }
 
-    & .areaHeader { /* TODO: make like centerH */
+    & .areaHeader {
         margin: 0 auto;
         justify-content: center;
     }
@@ -368,49 +366,10 @@ a {
     }
 }
 
-/*img.previewImage {*/
-/*    height: 100%;*/
-/*    width: auto;*/
-/*}*/
 
 .hidden {
     display: none;
 }
-
-/*.sectionHolder > .dateHolder {*/
-/*    justify-content: center;*/
-/*    padding-bottom: var(--smallSpace);*/
-/*}*/
-
-/*.createdUpdatedArea .dateHeader {*/
-/*    justify-content: center;*/
-/*    padding-bottom: var(--smallSpace);*/
-/*}*/
-
-/*.createdUpdatedArea {*/
-/*    display: grid;*/
-/*    grid-template-columns: 1fr 1fr;*/
-/*    !*grid-gap: 20px;*!*/
-/*    !*#border: 1px solid black;*!*/
-/*    width: 50%;*/
-/*}*/
-
-/*.createdUpdatedDisposedArea {*/
-/*    display: flex;*/
-/*    align-content: flex-start;*/
-/*    align-items: center;*/
-/*    !*grid-gap: 20px;*!*/
-/*    !*#border: 1px solid black;*!*/
-/*}*/
-
-/*.createdUpdatedDisposedArea .dateHeader {*/
-/*    justify-content: center;*/
-/*    padding-bottom: var(--smallSpace);*/
-/*}*/
-
-/*.createdUpdatedDisposedArea > .disposedArea > .areaHeader {*/
-/*    padding-bottom: var(--smallSpace);*/
-/*}*/
 
 .areaHeader {
     justify-content: center;
@@ -468,19 +427,19 @@ a {
     }
 }
 
-.mriInfoHolder {
-    /* TODO: STYLING THE DATES AND NOTES! */
+/*.mriInfoHolder {*/
+/*    !* TODO: STYLING THE DATES AND NOTES! *!*/
 
-    & > div {
-        &:first-child {
-            /* TODO: the date of the image! */
-        }
+/*    & > div {*/
+/*        &:first-child {*/
+/*            !* TODO: the date of the image! *!*/
+/*        }*/
 
-        &.notes, & .notes {
-            /* TODO: the notes of the image! */
-        }
-    }
-}
+/*        &.notes, & .notes {*/
+/*            !* TODO: the notes of the image! *!*/
+/*        }*/
+/*    }*/
+/*}*/
 
 .picRow {
     width: 100%;
@@ -587,12 +546,10 @@ a {
 
 .createdItem {
     background-color: darkgreen; /* TODO: CHANGE */
+    &:first-child {
+        background-color: green; /* TODO: CHANGE */
+    }
 }
-
-.createdItem:first-child {
-    background-color: green; /* TODO: CHANGE */
-}
-
 
 .contamRow {
     & > * {
@@ -638,10 +595,6 @@ a {
 .inline {
     display: inline-block;
 }
-
-/*.gensDisplay > * {*/
-/*    display: block;*/
-/*}*/
 
 .gensParent > * {
     margin: var(--smallSpace);
@@ -934,7 +887,7 @@ a {
 .subForm > .notesAreaV2Grid { /*NewEntryNotes*/
     align-content: start;
     /* Pushes items to the absolute edges, maximizing space between them */
-    justify-content: space-around; /* TODO: SHOULD BE start?*/
+    justify-content: space-around;
 }
 .inputNumbersInline {
     width: max-content;
