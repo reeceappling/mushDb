@@ -31,7 +31,7 @@ export default async function Page() {
         <ul>
             <li><a href={"/policies/cookies"}>{"Cookies Policy"}</a></li>
             <li><a href={"/policies/privacy"}>{"Privacy Policy"}</a></li>
-            <li><a href={"/policies/security"}>{"Security Policy"}</a></li>{/* TODO: ensure list updated!*/}
+            <li><a href={"/policies/security"}>{"Security Policy"}</a></li>{/* TODO: ensure list updated! make dynamic!*/}
         </ul>
     </>
     return <PageWrapper props={{pageType: "policies", readers: readers}}>

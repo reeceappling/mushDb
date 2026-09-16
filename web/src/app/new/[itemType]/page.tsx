@@ -48,7 +48,7 @@ export default async function Page({
     const session = cookieStore.get('_gothic_session')
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     let speciesData: SpeciesData | undefined = undefined
-    if (species !== undefined){
+    if (species !== undefined){ // TODO: validate works for subspecies!
         speciesData = await fetch(BaseExternalUrl+"/db/get/species/"+species[0], {
             method: 'Get',
             credentials: 'include',
