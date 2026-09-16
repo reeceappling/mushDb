@@ -24,7 +24,12 @@ export default async function sitemap(props: {
     const importTyps = ["bag", "fruit", "fruitingChamber", "jar", "lc", "lcSyringe", "mss", "plate", "plugs", "slant", "sporePrint", "sporeSwab", "stasisTube", "waterJar"]
     const newTyps = ["agarRecipe", "jarRecipe", "lcRecipe", "pcRun", "plugs", "project", "species", "subspecies", "substrateRecipe", "waterJar"]
     const policiesPages = ["cookies","privacy","security"] // TODO: ensure list is complete
-    const publicFiles = ["security.txt", "robots.txt", "staticContent/securityAcknowledgements.txt"] // TODO: ensure list is complete
+    const staticPoliciesPaths = ["cookies","privacy","security"].map(f=>{return `policies/${f}.txt`})
+    const staticContentPaths = ["securityAcknowledgements.txt",...staticPoliciesPaths].map(p=>{
+        return `staticContent/${p}`
+    })
+    const publicFiles = ["security.txt", "robots.txt"/* TODO: ADD!*/, ...staticContentPaths] // TODO: ensure list is complete
+
 
     return [
         { // Main page
