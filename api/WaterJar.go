@@ -90,7 +90,7 @@ func initializeWaterJars(ctx context.Context) error {
 		return err
 	}
 	return env.IfNotProd(ctx, func() error {
-		// If test agar batch does not exist, then create it
+		// If test (default) jar does not exist, then create it
 		testItem := &WaterJar{
 			MainCollectionIdField: MainCollectionIdField{exWaterId},
 			CreationDateField:     CreationDateField{exampleTime},

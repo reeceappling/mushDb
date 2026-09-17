@@ -177,7 +177,133 @@ func Initialize(ctx context.Context) error {
 	}
 	// TODO: validateDbEntries(ctx) like ensuring pc runs exist on all appropriate things?
 
-	return nil
+	return migrateDbEntries(ctx)
+}
+
+func migrateDbEntries(ctx context.Context) error {
+	//println("skipping db migration") // TODO: remove if migrating
+	//return nil
+	println("running db migration")
+	return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
+		db := sessCtx.Client().Database(dbName)
+		doesNotExistFilter := func(fieldname string) bson.M {
+			return bson.M{
+				fieldname: bson.M{"$exists": false},
+			}
+		}
+		// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
+		println("migrating agar batch dependents")
+		abFilt := doesNotExistFilter("agarBatch")
+		for typ, collName := range map[string]string{
+			"plate": PlatesCollectionName,
+			"slant": SlantsCollectionName,
+		} {
+			coll := db.Collection(collName)
+			amt, err := coll.CountDocuments(sessCtx, bson.D{})
+			if err != nil {
+				return err
+			}
+			upd, err := NewMods().Set("agarBatch", exAltId).Finalized()
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed to create AB update for %ss`, typ), err)
+			}
+			res, err := coll.UpdateMany(sessCtx, abFilt, upd)
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed AB updateMany for %ss`, typ), err)
+			}
+			if res.MatchedCount != res.ModifiedCount {
+				return errors.New("did not modify all matches for " + typ + "s for batches, reverting")
+			}
+			if res.ModifiedCount == amt {
+				return errors.New("tried to modify all " + typ + "s for batches, reverting")
+			}
+		}
+		// TODO: migrate grain batch dependent things (jar, grainWaterJar (already required)), then make them not optional
+		println("migrating grain batch dependents")
+		gbFilt, coll := doesNotExistFilter("grainBatch"), db.Collection(GrainJarCollectionName)
+		amt, err := coll.CountDocuments(sessCtx, bson.D{})
+		if err != nil {
+			return err
+		}
+		upd, err := NewMods().Set("grainBatch", exAltId).Finalized()
+		if err != nil {
+			return errors.Join(fmt.Errorf(`failed to create GB update for grainJars`), err)
+		}
+		res, err := coll.UpdateMany(sessCtx, gbFilt, upd)
+		if err != nil {
+			return errors.Join(fmt.Errorf(`failed GB updateMany for grainJars`), err)
+		}
+		if res.MatchedCount != res.ModifiedCount {
+			return errors.New("did not modify all matches for grainJars for batches, reverting")
+		}
+		if res.ModifiedCount == amt {
+			return errors.New("tried to modify all grainJars for batches, reverting")
+		}
+
+		// TODO: migrate substrate batch dependent things (bag, box), then make them not optional
+		println("migrating substrate batch dependents")
+		sbFilt := doesNotExistFilter("substrateBatch")
+		for typ, collName := range map[string]string{
+			"bag":             BagsCollectionName,
+			"fruitingChamber": FruitingChamberCollectionName,
+		} {
+			coll := db.Collection(collName)
+			amt, err := coll.CountDocuments(sessCtx, bson.D{})
+			if err != nil {
+				return err
+			}
+			upd, err := NewMods().Set("substrateBatch", exAltId).Finalized()
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed to create SB update for %ss`, typ), err)
+			}
+			res, err := coll.UpdateMany(sessCtx, sbFilt, upd)
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed SB updateMany for %ss`, typ), err)
+			}
+			if res.MatchedCount != res.ModifiedCount {
+				return errors.New("did not modify all matches for " + typ + "s for subBatches, reverting")
+			}
+			if res.ModifiedCount == amt {
+				return errors.New("tried to modify all " + typ + "s for subBatches, reverting")
+			}
+		}
+
+		// TODO: migrate water jar dependent things? ((mss (make required), stasis tube (stays optional)))
+		println("migrating water jar dependents")
+		wjFilt := doesNotExistFilter("waterSource")
+		for typ, collName := range map[string]string{
+			"mss": MssCollectionName,
+		} {
+			coll := db.Collection(collName)
+			amt, err := coll.CountDocuments(sessCtx, bson.D{})
+			if err != nil {
+				return err
+			}
+			upd, err := NewMods().Set("waterSource", exWaterId).Finalized()
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed to create WJ update for %ss`, typ), err)
+			}
+			res, err := coll.UpdateMany(sessCtx, wjFilt, upd)
+			if err != nil {
+				return errors.Join(fmt.Errorf(`failed WJ updateMany for %ss`, typ), err)
+			}
+			if res.MatchedCount != res.ModifiedCount {
+				return errors.New("did not modify all matches for " + typ + "s for wj, reverting")
+			}
+			if res.ModifiedCount == amt {
+				return errors.New("tried to modify all " + typ + "s for wj, reverting")
+			}
+		}
+		// TODO: migrate grain water jar dependent things (agarBatch, LC), then make them not optional in cases where needed
+		// TODO: iterate over all agarBatches where a gwj should exist
+		// TODO: iterate over all LC where gwj should exist
+		println("migrating grainwater jar dependents")
+
+		// TODO: migrate pc run dependent things (Jar (required when?), plugs(required when?), agarBatch?, waterJar, bag(required when?), stasisTube(required when?)), then make them not optional where needed
+		println("migrating pc run dependents")
+
+		return nil
+	})
 }
 
 //func validateDbEntries(ctx context.Context) {
