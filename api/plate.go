@@ -302,7 +302,7 @@ func emptyTestPlate() Plate {
 			GenSporeField: GenSporeField{},
 		},
 		TransfersOutField:                 TransfersOutField{},
-		ParentTypeField:                   ParentTypeField{},
+		ParentTypeField:                   ParentTypeField{}, // TODO: should this have a parentType?
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
 		PicsField:                         PicsField{},
 		ContaminationsField:               ContaminationsField{},
