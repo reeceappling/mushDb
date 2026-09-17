@@ -82,21 +82,19 @@ func initializeGrainBatches(ctx context.Context) error {
 	// TODO: ENSURE THIS BATCH IS PRESENT AS THE DEFAULT!
 	return env.IfNotProd(ctx, func() error {
 		soakTime, boilTime, dryTime := 8, 30, 4
-		testItem := GrainBatch{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		defaultItem := GrainBatch{
+			AlternateCollectionIdField: defaultAltIdField,
 			SoakTimeHours:              &soakTime,
 			BoilTimeMins:               &boilTime,
 			DryTimeHours:               &dryTime,
-			CreationDateField:          CreationDateField{},
+			CreationDateField:          CreationDateField{exampleTime},
 			JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
-			NotesField: NotesField{Notes: []Note{{
-				RequiredTimeField: RequiredTimeField{},
-				Note:              "Placeholder default grain batch",
-			}}},
-			LastUpdatedField: LastUpdatedField{exampleTime},
+			NotesField:                 defaultEntryNotes(),
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanReadAcl(nil), // TODO: ok? ensure changed
 		}
-		println("test Grain Batch:", exAltId.AsBase58())
-		return addTestAltEntries(ctx, testItem)
+		println("default Grain Batch:", exAltId.AsBase58())
+		return addTestAltEntries(ctx, defaultItem)
 	})
 }
 

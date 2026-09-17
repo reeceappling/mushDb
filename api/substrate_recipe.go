@@ -99,13 +99,13 @@ func initializeSubstrates(ctx context.Context) error {
 
 		// Add test entry
 		testItem := &SubstrateRecipe{
-			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+			AlternateCollectionIdField: defaultAltIdField,
 			NameField:                  NameField{testEntryStringId},
 			StandardField:              StandardField{false},
 			AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
-			NotesField:                 NotesField{exampleNotes()},
+			NotesField:                 defaultEntryNotes(), // TODO: ensure updated
 			LastUpdatedField:           LastUpdatedField{exampleTime},
-			AclField:                   allCanWriteAcl(),
+			AclField:                   allCanReadAcl(nil),
 		}
 		return addTestAltEntries(ctx, testItem)
 	})

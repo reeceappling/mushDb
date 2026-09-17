@@ -52,7 +52,7 @@ func initializePCRuns(ctx context.Context) error {
 	}
 	// If test run does not exist, then create it
 	testItem := &PCRun{
-		AlternateCollectionIdField: impPcRun.asIdField(),
+		AlternateCollectionIdField: defaultAltIdField,
 		CreationDateField:          CreationDateField{exampleTime},
 		RunTimeMinutes:             180,
 		NotesField: NotesField{[]Note{{

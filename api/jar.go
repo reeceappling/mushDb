@@ -176,6 +176,7 @@ func initializeJars(ctx context.Context) error {
 		testId := mainCollIdForint(idTestJar)
 		testItem := &GrainJar{
 			MainCollectionIdField:   MainCollectionIdField{testId},
+			SizeCups:                4,
 			JarRecipeField:          JarRecipeField{&exAltId},
 			PcRunOptionalField:      PcRunOptionalField{&exAltId},
 			CreationDateField:       CreationDateField{exampleTime},
@@ -195,9 +196,8 @@ func initializeJars(ctx context.Context) error {
 			SaleField:                         SaleField{&exAltId},
 			DisposedField:                     DisposedField{&exampleTime},
 			MostRecentImageField:              MostRecentImageField{&exPics[0]},
-			NotesField:                        NotesField{exampleNotes()},
+			NotesField:                        defaultEntryNotes(),
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
-			SizeCups:                          4,
 		}
 		return addTestMainEntries(ctx, testItem)
 	})

@@ -275,11 +275,16 @@ func initializeSales(ctx context.Context) error {
 	return env.IfNotProd(ctx, func() error {
 		// If test agar batch does not exist, then create it
 		testItem := &Sale{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			AlternateCollectionIdField: defaultAltIdField,
 			CreationDateField:          CreationDateField{exampleTime},
-			NotesField:                 NotesField{exampleNotes()},
-			LastUpdatedField:           LastUpdatedField{exampleTime},
-			AclField:                   allCanReadAcl(nil),
+			NotesField: NotesField{Notes: []Note{
+				{
+					RequiredTimeField: RequiredTimeField{exampleTime},
+					Note:              "Example sale, used for testing and development purposes",
+				},
+			}},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanReadAcl(nil),
 		}
 		return addTestAltEntries(ctx, testItem)
 	})

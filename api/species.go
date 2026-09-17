@@ -163,7 +163,7 @@ func initializeSpecies(ctx context.Context) error {
 
 		testItem := &Species{
 			NameIdField:       NameIdField{TestSpeciesName},
-			ScientificName:    "examplius speciesus",
+			ScientificName:    "Example Species",
 			AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
 			Subspecies:        []string{},
 			StandardSubstrate: exAltId,

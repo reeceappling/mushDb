@@ -326,6 +326,14 @@ type NutrientMeasurement struct {
 	Unit     string   `bson:"unit" json:"unit"`         // mL, tsp, tbsp, drop, pinch, cup, etc
 }
 
+func newNutrientMeasurement(n Nutrient, amt float64, unit string) NutrientMeasurement {
+	return NutrientMeasurement{
+		Nutrient: n,
+		Amount:   amt,
+		Unit:     unit,
+	}
+}
+
 type Nutrient string
 
 var nutrients = []Nutrient{

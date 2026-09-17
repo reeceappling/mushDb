@@ -155,9 +155,8 @@ func initializeSlants(ctx context.Context) error {
 	}
 	return env.IfNotProd(ctx, func() error {
 		// If test agar batch does not exist, then create it
-		testId := mainCollIdForint(idTestSlant)
 		testItem := &Slant{
-			MainCollectionIdField:   MainCollectionIdField{testId},
+			MainCollectionIdField:   MainCollectionIdField{mainCollIdForint(idTestSlant)},
 			AgarBatchField:          AgarBatchField{&exAltId},
 			CreationDateField:       CreationDateField{exampleTime},
 			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},

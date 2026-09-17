@@ -107,6 +107,21 @@ func initializeAgarRecipes(ctx context.Context) error {
 	basicEntryAcl := allCanReadAcl(nil)
 	basicEntries := []*AgarRecipe{
 		{
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idDefaultAlternate)},
+			NameField:                  NameField{"Unknown"},
+			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
+			Agar:                       20,
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				nutMmt(LME, 20, "g"),
+			}},
+			SugarsField:   SugarsField{},
+			StandardField: StandardField{true},
+			NotesField: NotesField{Notes: []Note{
+				{Note: "Default agar recipe for entries with unknown agar type (imports)", RequiredTimeField: builtinTime},
+			}},
+			AclField: basicEntryAcl,
+		},
+		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
 			NameField:                  NameField{"LMEA"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
@@ -190,8 +205,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 	// Add test entries if dev
 	return env.IfNotProd(ctx, func() error {
 		testItem := &AgarRecipe{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			NameField:                  NameField{testEntryStringId},
+			AlternateCollectionIdField: defaultAltIdField,
+			NameField:                  NameField{"Default or Unknown"},
 			LiquidsField: LiquidsField{[]Liquid{
 				Water.AsLiquid().withPct(40.0),
 				DistilledWater.AsLiquid().withPct(60.0),
@@ -224,9 +239,9 @@ func initializeAgarRecipes(ctx context.Context) error {
 				},
 			}},
 			AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
-			NotesField:       NotesField{exampleNotes()},
+			NotesField:       defaultEntryNotes(),
 			LastUpdatedField: LastUpdatedField{exampleTime},
-			AclField:         AclField{testAcl},
+			AclField:         AclField{testAcl}, // TODO: allCanReadAcl(nil)? ensure changed if modified
 		}
 
 		// Add test entries

@@ -102,22 +102,14 @@ func initializeLcRecipes(ctx context.Context) error {
 	}
 	return env.IfNotProd(ctx, func() error {
 		// Add test entries
-		testItem := &LcRecipe{
-			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			NameField:                  NameField{"testLcRecipeName"},
+		testItem := &LcRecipe{ // TODO: ensure updated
+			AlternateCollectionIdField: defaultAltIdField,
+			NameField:                  NameField{"default or unknown"}, // TODO: change?
 			StandardField:              StandardField{false},
 			LiquidsField:               allWater,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
-				{
-					Nutrient: LME,
-					Amount:   1,
-					Unit:     "kg",
-				},
-				{
-					Nutrient: Potato,
-					Amount:   8,
-					Unit:     "ug",
-				},
+				newNutrientMeasurement(LME, 1, "kg"),
+				newNutrientMeasurement(Potato, 8, "ug"),
 			}},
 			SugarsField: SugarsField{[]SugarMeasurement{
 				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
@@ -126,9 +118,9 @@ func initializeLcRecipes(ctx context.Context) error {
 				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
 			}},
-			NotesField:       NotesField{exampleNotes()},
+			NotesField:       defaultEntryNotes(),
 			LastUpdatedField: LastUpdatedField{exampleTime},
-			AclField:         allCanWriteAcl(),
+			AclField:         allCanReadAcl(nil),
 		}
 		return addTestAltEntries(ctx, testItem)
 	})

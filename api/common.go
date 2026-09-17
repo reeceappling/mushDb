@@ -728,6 +728,7 @@ func handleFileDeleteErr(err error) {
 var (
 	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
+	defaultAltIdField    = exAltId.asIdField()
 	defGrainBatchId      = exAltId // TODO; ensure ok
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
@@ -824,6 +825,13 @@ func exampleNotes() []Note {
 		RequiredTimeField: exReqTimeField,
 		Note:              "test/example entry note 2",
 	}}
+}
+
+func defaultEntryNotes() NotesField {
+	return NotesField{Notes: []Note{{
+		RequiredTimeField: exReqTimeField,
+		Note:              "Default Placeholder Entry",
+	}}}
 }
 
 func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {

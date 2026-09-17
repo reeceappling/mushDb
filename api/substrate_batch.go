@@ -70,10 +70,10 @@ func initializeSubstrateBatches(ctx context.Context) error {
 		}...)
 		// Add test entry
 		testItem := SubstrateBatch{
-			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+			AlternateCollectionIdField: defaultAltIdField,
 			CreationDateField:          CreationDateField{exampleTime},
 			SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
-			NotesField:                 NotesField{exampleNotes()},
+			NotesField:                 defaultEntryNotes(), // TODO: ensure updated
 			LastUpdatedField:           LastUpdatedField{exampleTime},
 			AclField:                   allCanWriteAcl(),
 		}

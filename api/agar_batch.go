@@ -103,17 +103,16 @@ func initializeAgarBatches(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, and is dev, then create it
 	return env.IfNotProd(ctx, func() error {
-		testAltId := altCollIdForint(0)
 		testItem := AgarBatch{
-			AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
-			PcRunField:                 PcRunField{testAltId},
-			AgarRecipeField:            AgarRecipeField{testAltId},
+			AlternateCollectionIdField: defaultAltIdField,
+			PcRunField:                 PcRunField{exAltId},
+			AgarRecipeField:            AgarRecipeField{exAltId},
 			Color:                      clearColor,
-			NotesField:                 NotesField{exampleNotes()},
+			NotesField:                 defaultEntryNotes(),
 			LastUpdatedField:           LastUpdatedField{exampleTime},
 			AclField:                   allCanReadAcl(nil),
 		}
-		println("test Agar Batch:", testAltId.AsBase58())
+		println("default Agar Batch:", exAltId.AsBase58())
 		return addTestAltEntries(ctx, testItem)
 	})
 }

@@ -142,22 +142,14 @@ func initializeJarRecipes(ctx context.Context) error {
 	// Add test entries
 	return env.IfNotProd(ctx, func() error {
 		// If test jar recipe does not exist, then create it
-		testItem := &JarRecipe{
+		testItem := &JarRecipe{ // TODO: ensure updated
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-			NameField:                  NameField{"testJarRecipeName"},
+			NameField:                  NameField{"testJarRecipeName"}, // TODO: change?
 			Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
 			StandardField:              StandardField{false},
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
-				{
-					Nutrient: LME,
-					Amount:   1,
-					Unit:     "kg",
-				},
-				{
-					Nutrient: Potato,
-					Amount:   8,
-					Unit:     "ug",
-				},
+				newNutrientMeasurement(LME, 1, "kg"),
+				newNutrientMeasurement(Potato, 8, "ug"),
 			}},
 			SugarsField: SugarsField{[]SugarMeasurement{
 				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
@@ -166,8 +158,9 @@ func initializeJarRecipes(ctx context.Context) error {
 				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
 			}},
-			NotesField:       NotesField{exampleNotes()},
+			NotesField:       defaultEntryNotes(),
 			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanReadAcl(nil), // TODO; ensure updated
 		}
 		return addTestAltEntries(ctx, testItem)
 	})

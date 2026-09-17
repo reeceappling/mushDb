@@ -155,19 +155,20 @@ func initializeTransfers(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	// TODO: also create many-to-one monotub test transfer
 	return env.IfNotProd(ctx, func() error {
+		imgLoc := (*ImageLocation)(&exPicLoc)
 		testItem := &Transfer{
-			AlternateCollectionIdField: exAltId.asIdField(),
+			AlternateCollectionIdField: defaultAltIdField,
 			From:                       exPlate,
 			To:                         exJar,
 			FromType:                   "plate",
 			ToType:                     "jar",
 			CreationDateField:          CreationDateField{exampleTime},
 			Reason:                     xferReasonReady,
-			FromImage:                  (*ImageLocation)(&exPicLoc),
-			ToImage:                    (*ImageLocation)(&exPicLoc),
+			FromImage:                  imgLoc,
+			ToImage:                    imgLoc,
 			NotesField:                 NotesField{exampleNotes()},
 			LastUpdatedField:           LastUpdatedField{exampleTime},
-			AclField:                   allCanWriteAcl(),
+			AclField:                   allCanReadAcl(nil), // TODO: ensure updated
 		}
 		return addTestAltEntries(ctx, testItem)
 	})

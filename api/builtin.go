@@ -56,13 +56,11 @@ const (
 	idGrainWaterAgar
 	idJarOatWithVermGypsum
 	idAntibioticAgar
-
 	idExampleTransfer
-
 	idTestBottle
 	idTestBatch
-
 	idTestGrainBatch
+	idDefaultAlternate
 )
 
 var ogTime = unix.TimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))

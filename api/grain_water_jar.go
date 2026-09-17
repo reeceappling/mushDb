@@ -111,10 +111,11 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 		id := mainCollIdForint(idTestGrainWaterJar)
 		testItem := GrainWaterJar{
 			MainCollectionIdField: MainCollectionIdField{id},
-			GrainBatchField:       GrainBatchField{GrainBatch: defGrainBatchId}, // TODO: ??? default to 0-batch for imports?
-			CreationDateField:     CreationDateField{},                          // TODO: ???
+			GrainBatchField:       GrainBatchField{GrainBatch: exAltId}, // TODO: ??? default to 0-batch for imports?
+			CreationDateField:     CreationDateField{},                  // TODO: ???
 			NotesField:            NotesField{exampleNotes()},
 			LastUpdatedField:      LastUpdatedField{exampleTime},
+			AclField:              allCanReadAcl(nil), // TODO: ok? Ensure updated
 		}
 		println("test Grain Water Jar:", id.AsBase58())
 		return addTestMainEntries(ctx, &testItem)
