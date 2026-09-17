@@ -21,16 +21,15 @@ import (
 // newSporeSwab, newSporePrint, clone(plate, slant)
 
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
-	MainCollectionIdField   `bson:"inline"`
-	CreationDateField       `bson:"inline"` // This is harvest date
-	SpeciesField            `bson:"inline"`
-	SubspeciesOptionalField `bson:"inline"`
-	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
-	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentTypeField         `bson:"inline"`    // EntryType, store, online, or outside
-	// parent can be "store, outside, or a mainCollectionId (box/bag)"
-	MainCollectionOptionalParentField `bson:"inline"` // NONEXISTENT MEANS FROM STORE or outside
+	MainCollectionIdField             `bson:"inline"`
+	CreationDateField                 `bson:"inline"` // This is harvest date
+	SpeciesField                      `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	GenSporeField                     `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	Prints                            []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
+	ParentTypeField                   `bson:"inline"`    // EntryType, store, online, or outside? TODO: or should this be actual parent type? // parent can be "store, outside, or a mainCollectionEntryType (box/bag)" TODO: ensure correct
+	MainCollectionOptionalParentField `bson:"inline"`    // NONEXISTENT MEANS FROM STORE or outside
 	PicsField                         `bson:"inline"`
 	DisposedField                     `bson:"inline"`
 	MostRecentImageField              `bson:"inline"`

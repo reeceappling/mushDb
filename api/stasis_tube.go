@@ -31,7 +31,7 @@ type StasisTube struct { // TODO: instructions somewhere?
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // must be plate, slant, or empty (purchased/other)
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`

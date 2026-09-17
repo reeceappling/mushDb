@@ -32,7 +32,7 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // nil == mainCollectionType (or purchased?), can also be MSS or clone!
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`

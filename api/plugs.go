@@ -21,7 +21,7 @@ import (
 type PlugsJar struct {
 	// TODO: DO DOWELS NEED TO BE SOAKED? Nutrients?
 	MainCollectionIdField             `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // empty==bought
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
 	MainCollectionOptionalParentField `bson:"inline"` // empty=bought. From plugs, jar, LC, plate/slant
 	CreationDateField                 `bson:"inline"`
 	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`

@@ -29,7 +29,7 @@ type Slant struct {
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone!
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`

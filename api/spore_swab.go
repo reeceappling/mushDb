@@ -19,7 +19,7 @@ type SporeSwab struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either sporePrint, fruit, or purchased
 	MainCollectionOptionalParentField `bson:"inline"` // won't exist for pre-existing or purchased
-	ParentTypeField                   `bson:"inline"` // sporePrint, fruit, or missing (purchased/other)
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
 	CreationDateField                 `bson:"inline"` // Swab or receive date
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`

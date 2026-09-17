@@ -174,7 +174,7 @@ func (field NutrientsField) Validate() error {
 	return nil
 }
 
-type ParentTypeField struct {
+type ParentTypeField struct { // mainCollectionType or nil (for store, outside, online)
 	ParentType *string `bson:"parentType,omitempty" json:"parentType,omitempty"`
 }
 

@@ -23,9 +23,9 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
-	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
-	JarRecipeField          `bson:"inline"` // Always required except on imports when it is optional
-	GrainBatchOptionalField `bson:"inline"` // Jar references batch which references recipe. Recipes can have multiple grains.
+	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
+	JarRecipeField          `bson:"inline"`                       // Always required except on imports when it is optional
+	GrainBatchOptionalField `bson:"inline"`                       // Jar references batch which references recipe. Recipes can have multiple grains.
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
@@ -36,7 +36,7 @@ type GrainJar struct {
 	InnocField                        `bson:"inline"` // TODO: multiple? What if first innoc does not work?
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: multiple?
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store // TODO: multiple?
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`

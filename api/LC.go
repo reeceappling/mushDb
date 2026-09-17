@@ -32,8 +32,8 @@ type LiquidCulture struct {
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"`
-	MainCollectionOptionalParentField `bson:"inline"` // Must come from (main) LC, plate, slant, (alt) lcSyringe
+	ParentTypeField                   `bson:"inline"` // TODO: properly populate parentType
+	MainCollectionOptionalParentField `bson:"inline"` // Must come from (main) LC, plate, slant, lcSyringe
 	PicsField                         `bson:"inline"`
 	ConfirmedCleanField               `bson:"inline"`
 	ContaminationsField               `bson:"inline"`

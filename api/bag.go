@@ -36,7 +36,7 @@ type Bag struct {
 	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
 	TransfersOutField                 `bson:"inline"` // Set on transfer out
 	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	ParentTypeField                   `bson:"inline"` // TODO: properly populate parentType
 	PicsField                         `bson:"inline"` // Updated independently
 	ContaminationsField               `bson:"inline"` // Updated independently
 	MostRecentImageField              `bson:"inline"`
