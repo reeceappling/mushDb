@@ -396,12 +396,16 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			GenSporeField:        GenSporeField{gen},
 			GenSinceFruitOrSpore: gen,
 		},
+		ParentTypeField:      ParentTypeField{ParentType: nil},
 		PicsField:            PicsField{pix},
 		ConfirmedCleanField:  data.ConfirmedCleanField,
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
+	}
+	if data.Species != nil {
+		toInsert.ParentType = &preexistingParent // TODO: do this on many other imports!
 	}
 
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
@@ -411,6 +415,8 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
+
+var preexistingParent = "pre-existing" // TODO: use this all over the place!
 
 type updateLiquidCultureRequest struct {
 	NotesUpdateField

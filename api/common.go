@@ -304,6 +304,8 @@ func validateAndMigrateDbEntries(ctx context.Context) error {
 	println("running db migration. THIS SHOULD NOT BE NORMALLY ACTIVE!!!!!!! SEARCH THE CODE FOR \"validateAndMigrateDbEntries\"")
 	return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
 		db := sessCtx.Client().Database(dbName)
+		// TODO: FIX Parent Type everywhere! it is now required on pretty much everything that is innoculated!
+
 		// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
 		if err := doMigrateForMissing(sessCtx, db, &AgarBatch{}, "agarBatch", []CollectionItem{
 			&Plate{}, &Slant{}, // TODO: ensure plate/slant imports add the batch

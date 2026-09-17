@@ -19,7 +19,7 @@ type SporeSwab struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either sporePrint, fruit, or purchased
 	MainCollectionOptionalParentField `bson:"inline"` // won't exist for pre-existing or purchased
-	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store
+	ParentTypeField                   `bson:"inline"` // TODO: properly show which parent maincollType this is, or outside, online, store, or pre-existing
 	CreationDateField                 `bson:"inline"` // Swab or receive date
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -50,6 +50,7 @@ func (sw SporeSwab) CanTransferTo(dst geneticSource) error {
 }
 
 func (sw SporeSwab) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+	// TODO: parentType? sporePrint, fruit?
 	return errors.New("sporeSwabs cannot be destinations of transfers")
 }
 

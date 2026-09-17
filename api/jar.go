@@ -23,9 +23,9 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
-	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
-	JarRecipeField          `bson:"inline"`                       // Always required except on imports when it is optional
-	GrainBatchOptionalField `bson:"inline"`                       // Jar references batch which references recipe. Recipes can have multiple grains.
+	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
+	JarRecipeField          `bson:"inline"` // Always required except on imports when it is optional
+	GrainBatchOptionalField `bson:"inline"` // Jar references batch which references recipe. Recipes can have multiple grains.
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
