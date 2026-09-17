@@ -11,6 +11,7 @@ import (
 	"github.com/disintegration/imageorient"
 	//"github.com/gen2brain/webp"
 	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
@@ -175,134 +176,187 @@ func Initialize(ctx context.Context) error {
 		name, b58IdStr := item.values()
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
-	// TODO: validateDbEntries(ctx) like ensuring pc runs exist on all appropriate things?
 
-	return migrateDbEntries(ctx)
+	return validateAndMigrateDbEntries(ctx)
 }
-
-func migrateDbEntries(ctx context.Context) error {
-	//println("skipping db migration") // TODO: remove if migrating
-	//return nil
-	println("running db migration")
-	return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
-		db := sessCtx.Client().Database(dbName)
-		doesNotExistFilter := func(fieldname string) bson.M {
-			return bson.M{
-				fieldname: bson.M{"$exists": false},
-			}
-		}
-		// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
-		println("migrating agar batch dependents")
-		abFilt := doesNotExistFilter("agarBatch")
-		for typ, collName := range map[string]string{
-			"plate": PlatesCollectionName,
-			"slant": SlantsCollectionName,
-		} {
-			coll := db.Collection(collName)
-			amt, err := coll.CountDocuments(sessCtx, bson.D{})
-			if err != nil {
-				return err
-			}
-			upd, err := NewMods().Set("agarBatch", exAltId).Finalized()
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed to create AB update for %ss`, typ), err)
-			}
-			res, err := coll.UpdateMany(sessCtx, abFilt, upd)
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed AB updateMany for %ss`, typ), err)
-			}
-			if res.MatchedCount != res.ModifiedCount {
-				return errors.New("did not modify all matches for " + typ + "s for batches, reverting")
-			}
-			if res.ModifiedCount == amt {
-				return errors.New("tried to modify all " + typ + "s for batches, reverting")
-			}
-		}
-		// TODO: migrate grain batch dependent things (jar, grainWaterJar (already required)), then make them not optional
-		println("migrating grain batch dependents")
-		gbFilt, coll := doesNotExistFilter("grainBatch"), db.Collection(GrainJarCollectionName)
+func doesNotExistFieldFilter(fieldname string) bson.M {
+	return bson.M{
+		fieldname: bson.M{
+			"$exists": false,
+		},
+	}
+}
+func doMigrateForMissing[T any, U CollectionItem](sessCtx mongo.SessionContext, db *mongo.Database, exampleItem U, missingField string, typColls []CollectionItem, setTo T) error {
+	migratingString := exampleItem.CollectionName()
+	println("migrating " + migratingString + " dependents")
+	filt := doesNotExistFieldFilter(missingField)
+	upd, err := NewMods().Set(missingField, setTo).Finalized()
+	if err != nil {
+		return errors.Join(fmt.Errorf(`failed to create %s update`, migratingString), err)
+	}
+	for _, entryType := range typColls {
+		collName := entryType.CollectionName()
+		coll := db.Collection(collName)
+		// TODO: can we confirm that each of the matched items is matching properly???
 		amt, err := coll.CountDocuments(sessCtx, bson.D{})
 		if err != nil {
 			return err
 		}
-		upd, err := NewMods().Set("grainBatch", exAltId).Finalized()
+		res, err := coll.UpdateMany(sessCtx, filt, upd)
 		if err != nil {
-			return errors.Join(fmt.Errorf(`failed to create GB update for grainJars`), err)
-		}
-		res, err := coll.UpdateMany(sessCtx, gbFilt, upd)
-		if err != nil {
-			return errors.Join(fmt.Errorf(`failed GB updateMany for grainJars`), err)
+			return errors.Join(fmt.Errorf(`failed %s updateMany for %ss`, migratingString, collName), err)
 		}
 		if res.MatchedCount != res.ModifiedCount {
-			return errors.New("did not modify all matches for grainJars for batches, reverting")
+			return fmt.Errorf("did not modify all matches for %ss for %s, reverting. Matched %d, modified %d", collName, migratingString, res.MatchedCount, res.ModifiedCount)
+		}
+		if res.MatchedCount == 0 {
+			println(fmt.Sprintf(`coll %s had no matches. No migration needed`, collName))
+			continue // succeeded
 		}
 		if res.ModifiedCount == amt {
-			return errors.New("tried to modify all grainJars for batches, reverting")
+			return fmt.Errorf("tried to modify all %ss for %s, reverting", collName, migratingString)
+		}
+		println(fmt.Sprintf(`coll %s added %s to %d of %d matched, out of %d total in collection`, collName, missingField, res.ModifiedCount, res.MatchedCount, amt))
+	}
+	return nil
+}
+func migrateGrainWaterJarDependent[T CollectionItem, U CollItemWithGwjs](sessCtx mongo.SessionContext, db *mongo.Database, upd bson.D, recipeType T, itemType U, recipeField string) error {
+	curs, err := db.Collection(recipeType.CollectionName()).Find(sessCtx, bson.M{"liquids.name": GrainWater})
+	if err != nil {
+		return err
+	}
+	recipesToMigrate := []AlternateCollectionId{}
+	for recipe, err := range iterateCursorIgnoringPerms(sessCtx, curs, recipeType) {
+		if err != nil {
+			return errors.Join(errors.New("recipe failure on iterator"), err)
+		}
+		id, ok := recipe.IdValue().(AlternateCollectionId)
+		if !ok {
+			return errors.New("failed to parse id")
+		}
+		recipesToMigrate = append(recipesToMigrate, id)
+	}
+	fullFilter := bson.M{
+		// Is a grainWater recipe
+		recipeField: bson.M{"$in": recipesToMigrate},
+		// Has no grain water
+		"$or": []bson.M{
+			{"grainWaterJars": bson.M{"$exists": false}},
+			{"grainWaterJars": bson.M{"$size": 0}},
+		},
+	}
+	itemCollName := itemType.CollectionName()
+	editColl := db.Collection(itemCollName)
+	// TODO: delete below when ready to actually migrate, and uncomment all above
+	expectedRecipes := utils.SetOf(sliceutils.Map(recipesToMigrate, func(r AlternateCollectionId) string {
+		return r.String()
+	}))
+	c, err := editColl.Find(sessCtx, fullFilter)
+	if err != nil {
+		return err
+	}
+	for batch, err := range iterateCursorIgnoringPerms(sessCtx, c, itemType) {
+		if err != nil {
+			return errors.Join(errors.New("batch failure on iterator"), err)
+		}
+		if len(batch.gwjs()) != 0 {
+			return errors.New("already had gwJars! SHOULD NOT HAPPEN!")
+		}
+		if !expectedRecipes.Contains(batch.recipeId().String()) {
+			return errors.New("recipe not in expected list")
+		}
+	}
+	// TODO: delete above to make faster once we confirm!
+	amt, err := editColl.CountDocuments(sessCtx, bson.D{})
+	if err != nil {
+		return err
+	}
+	res, err := editColl.UpdateMany(sessCtx, fullFilter, upd)
+	if err != nil {
+		return errors.Join(fmt.Errorf(`failed %s updateMany for %ss`, itemCollName, "gwjs"), err)
+	}
+	if res.MatchedCount != res.ModifiedCount {
+		return fmt.Errorf("did not modify all matches for %ss for %s, reverting. Matched %d, modified %d", itemCollName, "gwjs", res.MatchedCount, res.ModifiedCount)
+	}
+	if res.MatchedCount == 0 {
+		println(fmt.Sprintf(`coll %s had no matches for grainWater migration`, itemCollName))
+		return nil // Succeeded
+	}
+	if res.ModifiedCount == amt {
+		return fmt.Errorf("tried to modify all %ss for %s, reverting", itemCollName, "gwjs")
+	}
+	println(fmt.Sprintf(`coll %s added grainWaterJar to %d of %d matched, out of %d total in collection`, itemCollName, res.ModifiedCount, res.MatchedCount, amt))
+
+	return nil
+}
+
+//	func runUntilError(funcs ...func() error) error {
+//		for _, fn := range funcs {
+//			if err := fn(); err != nil {
+//				return err
+//			}
+//		}
+//		return nil
+//	}
+func validateAndMigrateDbEntries(ctx context.Context) error {
+	//println("skipping db migration") // TODO: remove if migrating
+	//return nil
+	println("running db migration. THIS SHOULD NOT BE NORMALLY ACTIVE!!!!!!! SEARCH THE CODE FOR \"validateAndMigrateDbEntries\"")
+	return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
+		db := sessCtx.Client().Database(dbName)
+		// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
+		if err := doMigrateForMissing(sessCtx, db, &AgarBatch{}, "agarBatch", []CollectionItem{
+			&Plate{}, &Slant{}, // TODO: ensure plate/slant imports add the batch
+		}, exAltId); err != nil {
+			return err
 		}
 
-		// TODO: migrate substrate batch dependent things (bag, box), then make them not optional
-		println("migrating substrate batch dependents")
-		sbFilt := doesNotExistFilter("substrateBatch")
-		for typ, collName := range map[string]string{
-			"bag":             BagsCollectionName,
-			"fruitingChamber": FruitingChamberCollectionName,
-		} {
-			coll := db.Collection(collName)
-			amt, err := coll.CountDocuments(sessCtx, bson.D{})
-			if err != nil {
-				return err
-			}
-			upd, err := NewMods().Set("substrateBatch", exAltId).Finalized()
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed to create SB update for %ss`, typ), err)
-			}
-			res, err := coll.UpdateMany(sessCtx, sbFilt, upd)
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed SB updateMany for %ss`, typ), err)
-			}
-			if res.MatchedCount != res.ModifiedCount {
-				return errors.New("did not modify all matches for " + typ + "s for subBatches, reverting")
-			}
-			if res.ModifiedCount == amt {
-				return errors.New("tried to modify all " + typ + "s for subBatches, reverting")
-			}
+		// TODO: migrate grain batch dependent things (jar, grainWaterJar (already required))
+		// TODO: THEN make them not optional
+		if err := doMigrateForMissing(sessCtx, db, &GrainBatch{}, "grainBatch", []CollectionItem{
+			&GrainJar{}, // TODO: ensure grainJar imports add the batch (and recipe?)
+		}, exAltId); err != nil {
+			return err
 		}
 
-		// TODO: migrate water jar dependent things? ((mss (make required), stasis tube (stays optional)))
-		println("migrating water jar dependents")
-		wjFilt := doesNotExistFilter("waterSource")
-		for typ, collName := range map[string]string{
-			"mss": MssCollectionName,
-		} {
-			coll := db.Collection(collName)
-			amt, err := coll.CountDocuments(sessCtx, bson.D{})
-			if err != nil {
-				return err
-			}
-			upd, err := NewMods().Set("waterSource", exWaterId).Finalized()
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed to create WJ update for %ss`, typ), err)
-			}
-			res, err := coll.UpdateMany(sessCtx, wjFilt, upd)
-			if err != nil {
-				return errors.Join(fmt.Errorf(`failed WJ updateMany for %ss`, typ), err)
-			}
-			if res.MatchedCount != res.ModifiedCount {
-				return errors.New("did not modify all matches for " + typ + "s for wj, reverting")
-			}
-			if res.ModifiedCount == amt {
-				return errors.New("tried to modify all " + typ + "s for wj, reverting")
-			}
+		// TODO: migrate substrate batch dependent things (bag, box)
+		// TODO: THEN make them not optional
+		if err := doMigrateForMissing(sessCtx, db, &SubstrateBatch{}, "substrateBatch", []CollectionItem{
+			&Bag{},             // TODO: ensure bag imports add the batch and recipe
+			&FruitingChamber{}, // TODO: ensure fc imports add the batch and recipe
+		}, exAltId); err != nil {
+			return err
 		}
-		// TODO: migrate grain water jar dependent things (agarBatch, LC), then make them not optional in cases where needed
-		// TODO: iterate over all agarBatches where a gwj should exist
-		// TODO: iterate over all LC where gwj should exist
+
+		// TODO: migrate pc run dependent things (Jar(DO ALL WITHOUT) (required when: innoculated, or just after pc run), plugs(DO ALL WITHOUT)(required when: innoculated, or just after pc run), agarBatch?(DO ALL WITHOUT), waterJar(DO ALL WITHOUT), bag(required when: innoculated, sealed, or after pc run)(DO ALL WITHOUT), stasisTube(required when?))(DO ALL WITHOUT)
+		// TODO: THEN make them not optional where needed
+		// 	TODO: ? optional are: Jar, Plugs, Bag, AgarBatch?, StasisTube?
+		// 	TODO: ? required are: WaterJar, AgarBatch?, StasisTube?
+		if err := doMigrateForMissing(sessCtx, db, &PCRun{}, "pcRun", []CollectionItem{
+			&AgarBatch{}, &Bag{}, &GrainJar{}, &PlugsJar{}, &StasisTube{}, &WaterJar{},
+		}, exAltId); err != nil {
+			return err
+		}
+
+		// TODO: migrate grain water jar dependent things (agarBatch, LC), keep optional on the things. May not need to do because optional
+		// TODO: iterate over all agarBatches where a gwj should exist. Keep optional.
+		// TODO: iterate over all LC where gwj should exist. Keep optional.
 		println("migrating grainwater jar dependents")
+		updGwj, err := NewMods().Push("grainWaterJars", mainCollIdForint(idTestGrainWaterJar)).Finalized()
+		if err != nil {
+			return err
+		}
+		if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &AgarRecipe{}, &AgarBatch{}, "agarRecipe"); err != nil {
+			return err
+		}
+		if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &LcRecipe{}, &LiquidCulture{}, "recipe"); err != nil {
+			return err
+		}
 
-		// TODO: migrate pc run dependent things (Jar (required when?), plugs(required when?), agarBatch?, waterJar, bag(required when?), stasisTube(required when?)), then make them not optional where needed
-		println("migrating pc run dependents")
+		// TODO: DONT migrate water jar dependent things? ((mss (keep optional, because bought mss will not have a water source), stasis tube (stays optional, because it may have just been PC'd with the water in it already)))
 
-		return nil
+		return errors.New("made it to the end of validateAndMigrateDbEntries, but committing the txn is currently disabled") // TODO: remove this line when we want to actually commit migration transaction
+		// TODO: return nil
 	})
 }
 
@@ -501,6 +555,39 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 		return nil, err
 	}
 	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
+}
+
+func iterateCursorIgnoringPerms[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, _ T) iter.Seq2[T, error] {
+	return func(yield func(T, error) bool) {
+		defer cursor.Close(ctx) // TODO; ensure ok
+		yieldCount := 0
+		for {
+			var result T
+			if cursor.TryNext(ctx) {
+				err := cursor.Decode(result) // TODO: or &result?
+				if !yield(result, err) {
+					return
+				}
+				if err != nil {
+					return
+				}
+				yieldCount++
+			}
+
+			cursorClosed := cursor.ID() == 0
+			if cursorClosed && yieldCount == 0 {
+				yield(result, mongo.ErrNoDocuments)
+				return
+			}
+			if err := cursor.Err(); err != nil {
+				yield(result, err)
+				return
+			}
+			if cursorClosed {
+				return
+			}
+		}
+	}
 }
 
 func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor) iter.Seq2[T, error] { // TODO: consider using!

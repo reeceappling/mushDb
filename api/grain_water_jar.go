@@ -207,7 +207,7 @@ func importGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TOD
 }
 
 type GrainWaterJarsField struct {
-	GrainWaterJars []AlternateCollectionId `bson:"grainWaterJars,omitempty" json:"grainWaterJars,omitempty"`
+	GrainWaterJars []MainCollectionId `bson:"grainWaterJars,omitempty" json:"grainWaterJars,omitempty"`
 }
 
 func (gwjs GrainWaterJarsField) EnsureExist(ctx context.Context, w http.ResponseWriter) error {
@@ -215,6 +215,16 @@ func (gwjs GrainWaterJarsField) EnsureExist(ctx context.Context, w http.Response
 		return nil
 	}
 	return ensureIdsExist(ctx, w, GrainWaterJarCollectionName, gwjs.GrainWaterJars)
+}
+
+func (gwjs GrainWaterJarsField) gwjs() []MainCollectionId {
+	return gwjs.GrainWaterJars
+}
+
+type CollItemWithGwjs interface {
+	CollectionItem
+	gwjs() []MainCollectionId
+	recipeId() AlternateCollectionId
 }
 
 // TODO: validate works, and use it everywhere necessary
@@ -250,17 +260,20 @@ type GrainWaterJarsDisposableField struct {
 }
 
 func (f GrainWaterJarsDisposableField) Dispose(ctx mongo.SessionContext) (int, error) {
+	if len(f.GrainWaterJars) == 0 {
+		return http.StatusOK, nil
+	}
 	db := DbFrom(ctx)
 	_, now := request.UnixTime(ctx)
-	toDispose := make([]AlternateCollectionId, 0, len(f.GrainWaterJars))
+	toDispose := make([]MainCollectionId, 0, len(f.GrainWaterJars))
 	for i := 0; i < len(f.GrainWaterJars); i++ {
 		if f.GrainWaterJarsDisposed[i] {
 			toDispose = append(toDispose, f.GrainWaterJars[i])
 		}
 	}
 	upd, err := NewMods().
-		setDisposedTo(now).    // TODO; ensure ok
-		setLastUpdatedTo(now). // TODO; ensure ok
+		setDisposedTo(now).
+		setLastUpdatedTo(now).
 		Finalized()
 	if err != nil {
 		return http.StatusInternalServerError, err

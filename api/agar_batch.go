@@ -29,6 +29,10 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	GrainWaterJarsField `bson:"inline"`
 }
 
+func (ab *AgarBatch) recipeId() AlternateCollectionId {
+	return ab.AgarRecipe
+}
+
 type AgarBatchField struct {
 	AgarBatch *AlternateCollectionId `bson:"agarBatch,omitempty" json:"agarBatch,omitempty"`
 }

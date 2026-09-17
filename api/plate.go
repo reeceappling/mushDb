@@ -79,9 +79,8 @@ type hasAgarOutside interface {
 }
 
 type Plate struct {
-	MainCollectionIdField `bson:"inline"`
-	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat?). we can use the agar batch to get the pc run or vise versa.
+	MainCollectionIdField               `bson:"inline"`
+	AgarBatchField                      `bson:"inline"` // will be empty for preexisting
 	CreationDateField                   `bson:"inline"`
 	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at pour time
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time

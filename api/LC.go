@@ -25,6 +25,7 @@ type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
 	PcRunField                        `bson:"inline"` // default for purchased
 	LcRecipeField                     `bson:"inline"` // always exists (unless purchased)
+	GrainWaterJarsField               `bson:"inline"` // TODO: add grainWaterJars when possible!!!! Needs to be handled on both the Go side and the TS side!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -54,6 +55,10 @@ func (l LiquidCulture) Children(ctx context.Context) (out []MainCollectionItem, 
 	// TODO: get fruits?
 	// TODO: get lcSyringes? if we dont track transfers
 	return out, nil
+}
+
+func (l *LiquidCulture) recipeId() AlternateCollectionId {
+	return l.Recipe
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
@@ -206,6 +211,7 @@ func initializeLCs(ctx context.Context) error {
 type createLiquidCultureRequest struct {
 	LcRecipeField
 	PcRunField
+	GrainWaterJarsDisposableField
 	NotesField
 	WriteTagToField
 }
@@ -227,11 +233,20 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, now := request.UnixTime(r.Context())
 
-	_, err = data.LcRecipeField.Get(ctx)
+	rec, err := data.LcRecipeField.Get(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if rec.ContainsGrainWater() != (len(data.GrainWaterJars) != 0) {
+		dbErr(w, "if the recipe calls for grainWater, it must be provided. If it does not, it must not be present.", http.StatusBadRequest)
+		return
+	}
+	// validate grainWater jars if they exist
+	if err = data.GrainWaterJarsDisposableField.EnsureExist(ctx, w); err != nil {
+		return // Already wrote
+	}
+
 	toInsert := LiquidCulture{
 		MainCollectionIdField: MainCollectionIdField{id},
 		LcRecipeField:         data.LcRecipeField,
@@ -252,7 +267,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w, data.GrainWaterJarsDisposableField.Dispose)
 }
 
 type importLiquidCultureRequest struct {
@@ -358,7 +373,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate
-	_, err = data.LcRecipeField.Get(ctx)
+	rec, err := data.LcRecipeField.Get(ctx)
 	if err != nil && errors.Is(err, ErrMissingOptionalField) {
 		dbErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -380,6 +395,9 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
+	}
+	if rec.ContainsGrainWater() {
+		toInsert.GrainWaterJars = []MainCollectionId{mainCollIdForint(idTestGrainWaterJar)}
 	}
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
