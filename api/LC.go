@@ -210,8 +210,8 @@ func initializeLCs(ctx context.Context) error {
 
 type createLiquidCultureRequest struct {
 	LcRecipeField
-	PcRunField
 	GrainWaterJarsDisposableField
+	PcRunField
 	NotesField
 	WriteTagToField
 }
@@ -250,6 +250,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := LiquidCulture{
 		MainCollectionIdField: MainCollectionIdField{id},
 		LcRecipeField:         data.LcRecipeField,
+		GrainWaterJarsField:   GrainWaterJarsField{GrainWaterJars: data.GrainWaterJars},
 		PcRunField:            PcRunField{data.PcRun},
 		CreationDateField:     CreationDateField{now},
 		NotesField:            NotesField{data.Notes},
@@ -378,10 +379,16 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	grainWaterJars := []MainCollectionId{}
+	if rec.ContainsGrainWater() {
+		grainWaterJars = []MainCollectionId{mainCollIdForint(idTestGrainWaterJar)}
+	}
+
 	toInsert := LiquidCulture{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		PcRunField:              PcRunField{impPcRun},
 		LcRecipeField:           LcRecipeField{data.Recipe},
+		GrainWaterJarsField:     GrainWaterJarsField{GrainWaterJars: grainWaterJars},
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -396,9 +403,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
 	}
-	if rec.ContainsGrainWater() {
-		toInsert.GrainWaterJars = []MainCollectionId{mainCollIdForint(idTestGrainWaterJar)}
-	}
+
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)

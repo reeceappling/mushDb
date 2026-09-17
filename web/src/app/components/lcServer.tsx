@@ -50,6 +50,7 @@ export interface LcData {
     confirmedClean?: boolean
     contamination?: Contamination[]
     knownFruitable?: boolean
+    grainWaterJars?: string[]
     disposed?: number
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]

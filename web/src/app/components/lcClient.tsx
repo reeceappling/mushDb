@@ -27,6 +27,7 @@ import {
     FlexedSinglesGroup,
     ImportDisplayInput,
     ImportEntryFormWrapper,
+    IsString,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -83,6 +84,7 @@ import {LcRecipeArea} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {GrainWaterJarData, GrainWaterJarsSelectionList} from "@/app/components/grainWaterJarServer";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -121,15 +123,15 @@ export function AssertLc(input: any): asserts input is LcData {
             throw new Error('Lc assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex required keys
-    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        //['acl', IsValidAcl],
-    ])
-    for (const [key, validator] of complexRequiredKeys) {
-        if (!RequiredKey(key, input, validator)) {
-            throw new Error('Lc assertion failure: required key ' + key + ' was not valid');
-        }
-    }
+    // // complex required keys
+    // const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    //     //['acl', IsValidAcl],
+    // ])
+    // for (const [key, validator] of complexRequiredKeys) {
+    //     if (!RequiredKey(key, input, validator)) {
+    //         throw new Error('Lc assertion failure: required key ' + key + ' was not valid');
+    //     }
+    // }
     // complex optional keys
     const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
@@ -141,6 +143,7 @@ export function AssertLc(input: any): asserts input is LcData {
     }
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['grainWaterJars', IsString],
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -376,6 +379,7 @@ export default function LcDisplay(
         {isInnoculated() && <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
                                                  transfersOut={initial.transfersOut}
                                                  allowNewTransferCreation={!readonly}/>}
+        {/* TODO: GRAIN WATER JARS */}
         <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
                      headerLevel={headerLevel}/>{/* Pics */}
         <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
@@ -406,6 +410,8 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const [grainWaterJars, setGrainWaterJars] = useState<GrainWaterJarData[]>([])
+    const [grainWaterJarsDisposed, setGrainWaterJarsDisposed] = useState<boolean[]>([])
 
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
@@ -422,6 +428,8 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             //creationDate: creationDate, // made serverside
             recipe: lcRecipe._id,
             pcRun: pcRun._id, // TODO: allow create without pc run?
+            grainWaterJars: grainWaterJars.map(v=>{return v._id}), // TODO: ensure undefined means left out
+            grainWaterJarsDisposed: grainWaterJarsDisposed,
             notes: notes,
             writeTagTo: writeTagTo,
         }
@@ -443,12 +451,17 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
                     }})
             })
     }
+    const setGrainJarInfo = (grainWaterJars:GrainWaterJarData[],grainWaterJarsDisposed:boolean[])=>{
+        setGrainWaterJars(grainWaterJars)
+        setGrainWaterJarsDisposed(grainWaterJarsDisposed)
+    }
 
     return <NewEntryFormWrapper entryType={"lc"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {lcRecipeIn === undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
                                                                 allowCreation={handlers.isTopLevel}
                                                                 creatorInPage={handlers.isTopLevel}/>}
+        {/* TODO: TEST THIS LINE AND WHAT IT DOES ON THE SERVER THOROUGHLY!*/(lcRecipe !== undefined && lcRecipe.liquids.find(l => l.name === "grain water") !== undefined) && <GrainWaterJarsSelectionList updateParent={setGrainJarInfo}/>}
         {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={true}/>}
         <NewEntryNotes setNotes={setNotes}/>
