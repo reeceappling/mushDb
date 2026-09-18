@@ -462,6 +462,127 @@ info:
 
 components:
   schemas:
+    Acl:
+      type: object
+      description: "Access Control List"
+      properties:
+        users:
+          description: "Optional map of user ids with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the user can write or not"
+        projects:
+          description: "Optional map of project names with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the project can write or not"
+        blanketPerm:
+          type: boolean
+          description: "What every user can do (excluding guests for writes, but including them for reads). True is write, false is read, and missing is no access."
+    AclField:
+        type: object
+        description: "Access Control List Field"
+        required:
+          - "acl"
+        properties:
+          acl:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AgarRecipeField:
+        type: object
+        description: "Represents the id of an agar recipe."
+        required:
+          - "agarRecipe"
+        properties:
+          agarRecipe:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AlternateCollectionIdField:
+        type: object
+        description: "Represents an alternate collection ID field in the main DB."
+        required:
+          - "_id"
+        properties:
+          _id:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    GrainWaterJarsField:
+        type: object
+        description: "An optional list of grainwater jar ids"
+        properties:
+          grainWaterJars:
+            type: array
+            items:
+              $ref: '#/components/schemas/Base58AlternateCollectionId'
+    LastUpdatedField:
+        type: object
+        description: "Represents a last updated timestamp of an entry."
+        required:
+          - "lastUpdated"
+        properties:
+          lastUpdated:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    MainCollectionIdField:
+        type: object
+        description: "Represents a main collection ID field in the main DB."
+        required:
+          - "_id"
+        properties:
+          _id:
+            $ref: '#/components/schemas/Base58MainCollectionId'
+    Note:
+      allOf:
+        - $ref: '#/components/schemas/RequiredTimeField'
+        - type: object
+          properties:
+            note:
+              type: string
+              description: "Text content of the note"
+    NotesField:
+        type: object
+        description: "A group of notes"
+        properties:
+          notes:
+            type: array
+            items:
+              $ref: '#/components/schemas/Note'
+    PcRunField:
+        type: object
+        description: "Represents a main collection ID field in the main DB."
+        required:
+          - "pcRun"
+        properties:
+          pcRun:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    RequiredTimeField:
+        type: object
+        description: "UnixTimeStampMs"
+        required:
+          - "time"
+        properties:
+          time:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    UnixTimestampMs:
+        type: number
+        description: "Unix timestamp in milliseconds."
+#    User:
+#      type: object
+#      description: A user entity from the database.
+#      required:
+#        - id
+#        - name
+#        - isActive
+#      properties:
+#        id:
+#          type: integer
+#          format: int64
+#          description: Unique identifier for the user.
+#        name:
+#          type: string
+#          example: Jane Doe
+#        isActive:
+#          type: boolean
+#          description: Indicates whether the user account is active.
+#
     entryId:
       description: "ID of an entry, which will either be a Base58 main/alt ID, or a string id"
       # TODO: this!
@@ -564,7 +685,23 @@ components:
       description: "Represents the base-58 bytes of an RFID tag."
       type: string
       example: "SampleRfidTagDataHereTODO" # TODO: replace
-    AgarBatch: # TODO: this
+    AgarBatch:
+      description: "Represents an agar batch in the main DB."
+      allOf:
+        - $ref: '#/components/schemas/AlternateCollectionIdField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/AgarRecipeField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+        - $ref: '#/components/schemas/GrainWaterJarsField'
+        - type: object
+          required:
+            - "color"
+          properties:
+            color:
+              type: string
+              description: "Text content of the note"
     CreateAgarBatchRequest: # TODO: this
     UpdateAgarBatchRequest: # TODO: this
     AgarRecipe: # TODO: this!
