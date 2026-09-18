@@ -262,6 +262,7 @@ func main() {
 	// TODO: NO TRACES ON /rfid/ws?
 	http.HandleFunc("/rfid/ws", Middlewares(ctxMiddleware, wrapWriter, rfidMiddleware)(http.HandlerFunc(websocketSessions.ServerHandler)).ServeHTTP) // TODO: was /rfid/ws // TODO: OPTIONS
 	// Must be internal to docker network
+	// TODO: split next 2 into get/post? or split next 4 into get/post/query/delete
 	http.HandleFunc("/rfid/read/{readerName}", Middlewares(tracerMiddleware("/rfid/read"), ctxMiddleware, wrapWriter, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)         // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	http.HandleFunc("/rfid/write/{writerName}", Middlewares(tracerMiddleware("/rfid/write"), ctxMiddleware, wrapWriter, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	http.HandleFunc("/rfid/readers", Middlewares(tracerMiddleware("/rfid/readers"), ctxMiddleware, wrapWriter, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)    // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
@@ -1580,11 +1581,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else { // TODO: del
+		} else {                 // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		} // TODO: del
+		}                                                                                       // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1894,7 +1895,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid { // TODO: remove later
+		if readerName == goodTestRfid {      // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -2025,7 +2026,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared")               // TODO: ok?
+	validResponse := []byte("Cleared") // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)
