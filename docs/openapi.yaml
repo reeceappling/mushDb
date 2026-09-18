@@ -489,6 +489,7 @@ components:
         properties:
           acl:
             $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AdditivesField: # TODO: this
     AgarRecipeField:
         type: object
         description: "Represents the id of an agar recipe."
@@ -497,6 +498,17 @@ components:
         properties:
           agarRecipe:
             $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AllEntries:
+      type: object
+      properties:
+        existing:
+          type: array
+          items:
+            $dynamicRef: '#allEntries'
+        new:
+          type: array
+          items:
+            $dynamicRef: '#allEntries'
     AlternateCollectionIdField:
         type: object
         description: "Represents an alternate collection ID field in the main DB."
@@ -505,14 +517,75 @@ components:
         properties:
           _id:
             $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AntibioticsField: # TODO: this
+    ContaminationsField: # TODO: this
+    ContamsUpdateField: # TODO: this!
+    CreationDateField:
+        type: object
+        description: "Represents a creation date timestamp of an entry."
+        required:
+          - "creationDate"
+        properties:
+          creationDate:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    DisposedField:
+      type: object
+      description: "Represents when an entry was disposed."
+      properties:
+        disposed:
+          $ref: '#/components/schemas/UnixTimestampMs'
+    FlushesField: # TODO: this
+    FlushesUpdateField: # TODO: this
+    GenerationsFields:
+      allOf:
+        - $ref: '#/components/schemas/GenSporeField'
+        - type: object
+          properties:
+            genFruitOrSpore:
+              $ref: '#/components/schemas/GenFruitOrSpore'
+    GenSpore:
+      type: integer
+      description: "The generations since spore"
+      $ref: '#/components/schemas/Generation'
+      # TODO: never less than 0
+    GenSporeField:
+      type: object
+      description: "The generations since spore, but a field in an object"
+      properties:
+        genSpore:
+          $ref: '#/components/schemas/GenSpore'
+    Generation:
+      type: integer
+      description: "Parents since something"
+      # TODO: never less than 0
+    GenFruitOrSpore:
+        type: integer
+        description: "The generations since fruit or spore"
+        $ref: '#/components/schemas/Generation'
     GrainWaterJarsField:
         type: object
         description: "An optional list of grainwater jar ids"
         properties:
-          grainWaterJars:
+          grainWaterJars: # TODO: optional always or no?
             type: array
             items:
               $ref: '#/components/schemas/Base58AlternateCollectionId'
+    GrainWaterJarsDisposableField:
+      allOf: # TODO: ensure length matches!
+        - $ref: '#/components/schemas/GrainWaterJarsField'
+        - type: array
+          description: "An array of bool where true dictates which jars to dispose"
+          items:
+            type: boolean
+    InnocField: # TODO: this!
+    ImagesUpdateField: # TODO: this!
+    KnownFruitableField:
+        type: object
+        description: "Represents a known fruitable boolean field of an entry. Unknown is nil"
+        properties:
+          knownFruitable:
+            type: boolean
+            description: "Whether the entry is known to be fruitable or not."
     LastUpdatedField:
         type: object
         description: "Represents a last updated timestamp of an entry."
@@ -521,6 +594,7 @@ components:
         properties:
           lastUpdated:
             $ref: '#/components/schemas/UnixTimestampMs'
+    LiquidsField: # TODO: this!
     MainCollectionIdField:
         type: object
         description: "Represents a main collection ID field in the main DB."
@@ -529,6 +603,9 @@ components:
         properties:
           _id:
             $ref: '#/components/schemas/Base58MainCollectionId'
+    MainCollectionOptionalParentField: # TODO: this!
+    MostRecentImageField: # TODO: this
+    NameField: # TODO: this!
     Note:
       allOf:
         - $ref: '#/components/schemas/RequiredTimeField'
@@ -542,9 +619,27 @@ components:
         description: "A group of notes"
         properties:
           notes:
-            type: array
-            items:
-              $ref: '#/components/schemas/Note'
+            $dynamicAnchor: allEntries
+            $ref: '#/components/schemas/AllEntries'
+    NotesUpdateField:
+      type: object
+      description: "Note updates"
+      required:
+        - "notes"
+      properties:
+        notes:
+          type: object
+          schema:
+            existing:
+              type: array
+              items:
+                $ref: '#/components/schemas/Note'
+            new:
+              type: array
+              items:
+                $ref: '#/components/schemas/Note'
+    NutrientsField: # TODO: this
+    ParentTypeField: # TODO: this
     PcRunField:
         type: object
         description: "Represents a main collection ID field in the main DB."
@@ -553,6 +648,48 @@ components:
         properties:
           pcRun:
             $ref: '#/components/schemas/Base58AlternateCollectionId'
+    PicsField: # TODO: this
+    PicWithNotes:
+      allOf:
+        - $ref: '#/components/schemas/PicWithNotesLessLocation'
+        - type: object
+          required:
+            - "location"
+          properties:
+            location:
+              type: string
+              description: "Location of the picture"
+    PicWithNotesLessLocation:
+        allOf:
+            - $ref: '#/components/schemas/RequiredTimeField'
+            - $ref: '#/components/schemas/NotesField'
+    permsOnRequestInternal:
+      type: object
+      description: "Access Control List used on requests, not responses"
+      properties:
+        users:
+          description: "Optional map of user ids with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the user can write or not"
+        projects:
+          description: "Optional map of project names with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the project can write or not"
+        blanketPerm:
+          type: boolean
+          description: "What every user can do (excluding guests for writes, but including them for reads). True is write, false is read, and missing is no access."
+    PermsOnRequest:
+      type: object
+      description: "Permissions on a request"
+      required:
+        - "acl"
+      properties:
+        acl:
+          $ref: '#/components/schemas/permsOnRequestInternal'
     RequiredTimeField:
         type: object
         description: "UnixTimeStampMs"
@@ -561,9 +698,46 @@ components:
         properties:
           time:
             $ref: '#/components/schemas/UnixTimestampMs'
+    SaleField: # TODO: this!
+    SpeciesField: # TODO; this!
+    SpeciesOptionalField: # TODO; this!
+    SubspeciesField: # TODO; this!
+    SubspeciesOptionalField: # TODO; this!
+    StandardField: # TODO: this
+    SubstrateBatchOptionalField:
+        type: object
+        description: "Represents the id of a substrate batch."
+        properties:
+          substrateBatch:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    SubstrateRecipeField:
+        type: object
+        description: "Represents the id of a substrate recipe."
+        required:
+          - "recipe"
+        properties:
+          recipe:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    SugarsField: # TODO: this
+    TransfersOutField: # TODO: this!
     UnixTimestampMs:
         type: number
         description: "Unix timestamp in milliseconds."
+    WetnessField:
+      type: object
+      description: "WetnessField contains an optional int 0-10. 5 is perfect, 0 is dry, 10 is soaked"
+      properties:
+        wetness:
+          type: number
+          format: float
+          description: "WetnessField contains an int 0-10. 5 is perfect, 0 is dry, 10 is soaked."
+    WriteTagToField:
+        type: object
+        description: "WriteTagToField contains an optional string of the reader/writer to write the result id to"
+        properties:
+          writeTagTo:
+            type: string
+            description: "The rfid reader/writer name"
 #    User:
 #      type: object
 #      description: A user entity from the database.
@@ -701,65 +875,188 @@ components:
           properties:
             color:
               type: string
-              description: "Text content of the note"
-    CreateAgarBatchRequest: # TODO: this
-    UpdateAgarBatchRequest: # TODO: this
-    AgarRecipe: # TODO: this!
-    CreateAgarRecipeRequest: # TODO: this!
-    UpdateAgarRecipeRequest: # TODO: this!
-    Bag: # TODO: this!
-    CreateBagRequest: # TODO: this!
-    ImportBagRequest: # TODO: this!
-    UpdateBagRequest: # TODO: this!
+              description: "The color of the agar batch"
+    CreateAgarBatchRequest:
+      description: "Request to create an agar batch"
+      allOf:
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/AgarRecipeField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/GrainWaterJarsDisposableField'
+        - type: object
+          required:
+            - "color"
+          properties:
+            color:
+              type: string
+              description: "The color of the agar batch"
+    UpdateAgarBatchRequest:
+      description: "Request to update an agar batch"
+      allOf:
+        - $ref: '#/components/schemas/PermsOnRequest'
+        - $ref: '#/components/schemas/NotesUpdateField'
+    AgarRecipe:
+      description: "Represents an agar recipe from the main DB."
+      allOf:
+        - $ref: '#/components/schemas/AlternateCollectionIdField'
+        - $ref: '#/components/schemas/CreateAgarRecipeRequest'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+    CreateAgarRecipeRequest:
+      description: "Request to create an agar recipe"
+      allOf:
+        - $ref: '#/components/schemas/NameField'
+        - type: object
+          required:
+            - "agar"
+          properties:
+            agar:
+              type: integer
+              description: "Grams of agar per liter of liquid"
+        - $ref: '#/components/schemas/LiquidsField'
+        - $ref: '#/components/schemas/StandardField'
+        - $ref: '#/components/schemas/NutrientsField'
+        - $ref: '#/components/schemas/SugarsField'
+        - $ref: '#/components/schemas/AdditivesField'
+        - $ref: '#/components/schemas/AntibioticsField'
+        - $ref: '#/components/schemas/NotesField'
+#        - $ref: '#/components/schemas/AclField' # TODO: or no? default?
+    UpdateAgarRecipeRequest:
+      description: "Request to update an agar recipe"
+      allOf:
+        - $ref: '#/components/schemas/NameField'
+        - $ref: '#/components/schemas/StandardField'
+        - $ref: '#/components/schemas/NotesUpdateField'
+        - $ref: '#/components/schemas/PermsOnRequest'
+    Bag:
+      description: "A Bag entry"
+      allOf:
+        - $ref: '#/components/schemas/MainCollectionIdField'
+        - $ref: '#/components/schemas/SubstrateRecipeField'
+        - $ref: '#/components/schemas/SubstrateBatchOptionalField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/CreationDateField'
+        - $ref: '#/components/schemas/GenerationsFields'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/SpeciesOptionalField'
+        - $ref: '#/components/schemas/SubspeciesOptionalField'
+        - $ref: '#/components/schemas/InnocField'
+        - $ref: '#/components/schemas/TransfersOutField'
+        - $ref: '#/components/schemas/MainCollectionOptionalParentField'
+        - $ref: '#/components/schemas/ParentTypeField'
+        - $ref: '#/components/schemas/PicsField'
+        - $ref: '#/components/schemas/ContaminationsField'
+        - $ref: '#/components/schemas/MostRecentImageField'
+        - $ref: '#/components/schemas/FlushesField'
+        - $ref: '#/components/schemas/SaleField'
+        - $ref: '#/components/schemas/DisposedField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+            sealDate:
+              description: "Date the bag was sealed"
+              $ref: '#/components/schemas/UnixTimestampMs'
+    CreateBagRequestData:
+      description: "Request to create a Bag"
+      allOf:
+        - $ref: '#/components/schemas/SubstrateBatchField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/WriteTagToField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+    ImportBagRequestData: # TODO; does not cover actual images, need to create request for that...
+      allOf:
+        - $ref: '#/components/schemas/CreationDateField'
+        - $ref: '#/components/schemas/SubstrateRecipeField'
+        - $ref: '#/components/schemas/SpeciesOptionalField'
+        - $ref: '#/components/schemas/SubspeciesOptionalField'
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/WriteTagToField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+            generation:
+              $ref: '#/components/schemas/Generation'
+    UpdateBagRequestData:
+      allOf:
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/DisposedField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/NotesUpdateField'
+        - $ref: '#/components/schemas/ImagesUpdateField' # "newPic-1"
+        - $ref: '#/components/schemas/ContamsUpdateField' # "newContam-1"
+        - $ref: '#/components/schemas/FlushesUpdateField' # "newFlush-1"
+        - $ref: '#/components/schemas/PermsOnRequest'
     Fruit: # TODO: this!
-    CreateFruitRequest: # TODO: this!
-    ImportFruitRequest: # TODO: this!
-    UpdateFruitRequest: # TODO: this!
+    CreateFruitRequestData: # TODO: this!
+    ImportFruitRequestData: # TODO: this!
+    UpdateFruitRequestData: # TODO: this!
     FruitingChamber: # TODO: this!
-    CreateFruitingChamberRequest: # TODO: this!
-    ImportFruitingChamberRequest: # TODO: this!
-    UpdateFruitingChamberRequest: # TODO: this!
+    CreateFruitingChamberRequestData: # TODO: this!
+    ImportFruitingChamberRequestData: # TODO: this!
+    UpdateFruitingChamberRequestData: # TODO: this!
     GrainBatch: # TODO: this!
     CreateGrainBatchRequest: # TODO: this!
     UpdateGrainBatchRequest: # TODO: this!
     GrainJar: # TODO: this!
-    CreateGrainJarRequest: # TODO: this!
-    ImportGrainJarRequest: # TODO: this!
-    UpdateGrainJarRequest: # TODO: this!
+    CreateGrainJarRequestData: # TODO: this!
+    ImportGrainJarRequestData: # TODO: this!
+    UpdateGrainJarRequestData: # TODO: this!
     GrainWaterJar: # TODO: this!
-    CreateGrainWaterJarRequest: # TODO: this!
-    ImportGrainWaterJarRequest: # TODO: this!
-    UpdateGrainWaterJarRequest: # TODO: this!
+    CreateGrainWaterJarRequestData: # TODO: this!
+    ImportGrainWaterJarRequestData: # TODO: this!
+    UpdateGrainWaterJarRequestData: # TODO: this!
     JarRecipe: # TODO: this!
     CreateJarRecipeRequest: # TODO: this!
     UpdateJarRecipeRequest: # TODO: this!
     LiquidCulture: # TODO: this!
-    CreateLiquidCultureRequest: # TODO: this!
-    ImportLiquidCultureRequest: # TODO: this!
-    UpdateLiquidCultureRequest: # TODO: this!
+    CreateLiquidCultureRequestData: # TODO: this!
+    ImportLiquidCultureRequestData: # TODO: this!
+    UpdateLiquidCultureRequestData: # TODO: this!
     LcRecipe: # TODO: this!
     CreateLcRecipeRequest: # TODO: this!
     UpdateLcRecipeRequest: # TODO: this!
     # TODO: USE DISCRIMINATOR FOR DIFFERENT TYPES OF REQUESTS AND RESPONSES!
     LcSyringe: # TODO: this!
-    CreateLcSyringeRequest: # TODO: this!
-    ImportLcSyringeRequest: # TODO: this!
-    UpdateLcSyringeRequest: # TODO: this!
+    CreateLcSyringeRequestData: # TODO: this!
+    ImportLcSyringeRequestData: # TODO: this!
+    UpdateLcSyringeRequestData: # TODO: this!
     MSS: # TODO: this!
-    CreateMSSRequest: # TODO: this!
-    ImportMSSRequest: # TODO: this!
-    UpdateMSSRequest: # TODO: this!
+    CreateMSSRequestData: # TODO: this!
+    ImportMSSRequestData: # TODO: this!
+    UpdateMSSRequestData: # TODO: this!
     PcRun: # TODO: this!
     CreatePcRunRequest: # TODO: this!
     UpdatePcRunRequest: # TODO: this!
     Plate: # TODO: this!
-    CreatePlateRequest: # TODO: this
-    ImportPlateRequest: # TODO: this
-    UpdatePlateRequest: # TODO: this
+    CreatePlateRequestData: # TODO: this
+    ImportPlateRequestData: # TODO: this
+    UpdatePlateRequestData: # TODO: this
     Plugs: # TODO: this!
-    CreatePlugsRequest: # TODO: this!
-    ImportPlugsRequest: # TODO: this!
-    UpdatePlugsRequest: # TODO: this!
+    CreatePlugsRequestData: # TODO: this!
+    ImportPlugsRequestData: # TODO: this!
+    UpdatePlugsRequestData: # TODO: this!
     Project: # TODO: this!
     CreateProjectRequest: # TODO: this!
     UpdateProjectRequest: # TODO: this!
@@ -767,24 +1064,24 @@ components:
     CreateSaleRequest: # TODO: this!
     UpdateSaleRequest: # TODO: this!
     Slant: # TODO: this!
-    CreateSlantRequest: # TODO: this!
-    ImportSlantRequest: # TODO: this!
-    UpdateSlantRequest: # TODO: this!
+    CreateSlantRequestData: # TODO: this!
+    ImportSlantRequestData: # TODO: this!
+    UpdateSlantRequestData: # TODO: this!
     Species: # TODO: this!
     CreateSpeciesRequest: # TODO: this!
     UpdateSpeciesRequest: # TODO: this!
     SporePrint: # TODO: this!
-    CreateSporePrintRequest: # TODO: this!
-    ImportSporePrintRequest: # TODO: this!
-    UpdateSporePrintRequest: # TODO: this!
+    CreateSporePrintRequestData: # TODO: this!
+    ImportSporePrintRequestData: # TODO: this!
+    UpdateSporePrintRequestData: # TODO: this!
     SporeSwab: # TODO: this!
-    CreateSporeSwabRequest: # TODO: this!
-    ImportSporeSwabRequest: # TODO: this!
-    UpdateSporeSwabRequest: # TODO: this!
+    CreateSporeSwabRequestData: # TODO: this!
+    ImportSporeSwabRequestData: # TODO: this!
+    UpdateSporeSwabRequestData: # TODO: this!
     StasisTube: # TODO: this!
-    CreateStasisTubeRequest: # TODO: this!
-    ImportStasisTubeRequest: # TODO: this!
-    UpdateStasisTubeRequest: # TODO: this!
+    CreateStasisTubeRequestData: # TODO: this!
+    ImportStasisTubeRequestData: # TODO: this!
+    UpdateStasisTubeRequestData: # TODO: this!
     Subspecies: # TODO: this!
     CreateSubspeciesRequest: # TODO: this!
     UpdateSubspeciesRequest: # TODO: this!
@@ -795,15 +1092,15 @@ components:
     CreateSubstrateRecipeRequest: # TODO: this!
     UpdateSubstrateRecipeRequest: # TODO: this!
     Transfer: # TODO: this!
-    CreateTransferRequest: # TODO: this!
-    UpdateTransferRequest: # TODO: this!
+    CreateTransferRequestData: # TODO: this!
+    UpdateTransferRequestData: # TODO: this!
     User: # TODO: this!
     CreateUserRequest: # TODO: this!
     UpdateUserRequest: # TODO: this!
     WaterJar: # TODO: this!
-    CreateWaterJarRequest: # TODO: this!
-    ImportWaterJarRequest: # TODO: this!
-    UpdateWaterJarRequest: # TODO: this!
+    CreateWaterJarRequestData: # TODO: this!
+    ImportWaterJarRequestData: # TODO: this!
+    UpdateWaterJarRequestData: # TODO: this!
 
 
 

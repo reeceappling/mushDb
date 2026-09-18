@@ -126,7 +126,7 @@ type createAgarBatchRequest struct {
 	PcRunField
 	AgarRecipeField
 	NotesField
-	GrainWaterJarsDisposableField // TODO: impl in ts
+	GrainWaterJarsDisposableField
 }
 
 func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: validate working! made lots of changes!
