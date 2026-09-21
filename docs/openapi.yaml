@@ -459,6 +459,46 @@ info:
       put: # TODO: this, unsure if exists
       query: # TODO: this, unsure if exists
     # TODO: biometrics endpoints if enabled
+    /EXAMPLE-MULTIPART-REQUEST:
+      post:
+        summary: Upload a profile with an avatar image
+        operationId: uploadProfile
+        requestBody:
+          required: true
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+#                additionalProperties: # TODO: optional image fields!
+#                  type: string
+#                  format: binary
+#                  description: The avatar profile image file to upload. FileName should be \"img\"
+                properties:
+                  # 1. Text Field
+                  data:
+                    type: object
+                    description: The core json data for the request
+                    # example: "johndoe"
+
+                  # 2. File Field (required image)
+                  image: # name on formData
+                    type: string
+                    format: binary
+                    description: The avatar profile image file to upload. FileName should be \"img\"
+                    # TODO: "img" or ("newPic/newContam/newFlush" + "-" + i)
+                    # TODO: fromImage or toImage for transfers?
+                required:
+                  - data
+        responses:
+          '200':
+            description: Profile uploaded successfully.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
 
 components:
   schemas:

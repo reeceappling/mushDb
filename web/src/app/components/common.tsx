@@ -21,32 +21,35 @@ import {
 import { InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
-import {AssertBag} from "@/app/components/bagClient";
-import {AssertFruit} from "@/app/components/fruitClient";
-import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
+import {AssertBag, BagSelector} from "@/app/components/bagClient";
+import {AssertFruit, FruitSelector} from "@/app/components/fruitClient";
+import {AssertFruitingChamber, FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 import {AssertGrainBatch} from "@/app/components/grainBatchClient";
-import {AssertJar} from "@/app/components/jarClient";
+import {AssertJar, JarSelector} from "@/app/components/jarClient";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
-import {AssertLc} from "@/app/components/lcClient";
-import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
-import {AssertMss} from "@/app/components/mssClient";
+import {AssertLc, LcSelector} from "@/app/components/lcClient";
+import {AssertLcSyringe, LcSyringeSelector} from "@/app/components/lcSyringeClient";
+import {AssertMss, MssSelector} from "@/app/components/mssClient";
 import {AssertPcRun} from "@/app/components/pcRunClient";
-import {AssertPlate} from "@/app/components/plateClient";
+import {AssertPlate, PlateSelector} from "@/app/components/plateClient";
 import {AssertProject} from "@/app/components/projectClient";
 import {AssertSale} from "@/app/components/saleClient";
-import {AssertSlant} from "@/app/components/slantClient";
+import {AssertSlant, SlantSelector} from "@/app/components/slantClient";
 import {AssertSpecies} from "@/app/components/speciesClient";
-import {AssertSporePrint} from "@/app/components/sporePrintClient";
-import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
-import {AssertStasisTube} from "@/app/components/stasisTubeClient";
+import {AssertSporePrint, SporePrintSelector} from "@/app/components/sporePrintClient";
+import {AssertSporeSwab, SporeSwabSelectorTable} from "@/app/components/sporeSwabClient";
+import {AssertStasisTube, StasisTubeSelectorTable} from "@/app/components/stasisTubeClient";
 import {AssertSubspecies} from "@/app/components/subspeciesClient";
 import {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
 import {AssertUser} from "./userClient";
-import {AssertWaterJar} from "@/app/components/waterJarClient";
+import {AssertWaterJar, WaterJarSelector} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {SelectorFor} from "@/app/components/selector";
+import {GrainWaterJarSelector} from "@/app/components/grainWaterJarClient";
+import {PlugsSelector} from "@/app/components/plugsClient";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -1490,4 +1493,130 @@ export const DefaultPopupInfo: PopupInfo = {
 //     } else {
 //         throw "client speech synthesis not currently available"
 //     }
+// }
+
+// export function MainCollectionItemSelectorByType({updateId}:{updateId:(id:string)=>void}){
+//     const [typ, setTyp] = useState<string | undefined>(undefined)
+//     const sr = ()=>{
+//         switch(typ||""){
+//             case "":
+//                 return null
+//             case "bag":
+//                 return <BagSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "fruit":
+//                 return <FruitSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "fruitingChamber":
+//                 return <FruitingChamberSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "grainWaterJar":
+//                 return <GrainWaterJarSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "jar":
+//                 return <JarSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "lc":
+//                 return <LcSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "lcSyringe":
+//                 return <LcSyringeSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "mss":
+//                 return <MssSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "plate":
+//                 return <PlateSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "plugs":
+//                 return <PlugsSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "slant":
+//                 return <SlantSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "sporePrint":
+//                 return <SporePrintSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "sporeSwab":
+//                 return <SporeSwabSelectorTable doSelect={/* TODO: fix! dont want table!*/b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "stasisTube":
+//                 return <StasisTubeSelectorTable doSelect={/* TODO: fix! dont want table!*/b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//             case "waterJar":
+//                 return <WaterJarSelector doSelect={b=>{
+//                     if (!b){
+//                         return
+//                     }
+//                     updateId(b._id)
+//                 }}/>
+//         }
+//     }
+//     return <div>
+//         <SelectorFor options={["","bag", "fruit","fruitingChamber","grainWaterJar","jar","lc","lcSyringe","mss","plate","plugs","slant","sporePrint","sporeSwab","stasisTube","waterJar"]} initial={typ||""}
+//                      updateParent={s=>{
+//                          if(s===""){
+//                              setTyp(undefined)
+//                          } else {
+//                              setTyp(s)
+//                          }
+//                      }} disabled={false}/>
+//         {sr()}
+//     </div>
 // }

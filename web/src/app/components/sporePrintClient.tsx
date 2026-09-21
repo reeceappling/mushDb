@@ -435,7 +435,7 @@ export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // 
         }
         formData.set("data", JSON.stringify(dataObj))
         if (image !== undefined) {
-            formData.set("img", image, "img")
+            formData.set("img", image, "img") // TODO: or image?
         }
         const dispatchUpdate = (isErr:boolean, text:string)=>{
             if(isErr){
