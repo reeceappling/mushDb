@@ -186,7 +186,8 @@
 - [ ] README
 ## Waiting on something else
 
-# Changes made that need to be tested
+# Things to Trial
+- [ ] GraphQL for updates and anything else that may work for it. PROBABLY NOT. MUTATIONS CANNOT EASILY BE GENERIC FOR ALL TYPES.
 
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0

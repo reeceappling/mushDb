@@ -195,7 +195,7 @@ func (req updateWaterJarRequest) modsFor(existing *WaterJar, aclField AclField) 
 }
 
 func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
-	_, id, err := mainCollIdFromRequest(r, w)
+	_, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

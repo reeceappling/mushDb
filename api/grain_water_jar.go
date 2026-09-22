@@ -124,8 +124,8 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 
 type updateGrainWaterJarRequest struct {
 	NotesUpdateField
-	PermsOnRequest `json:"acl"`
 	DisposedField
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateGrainWaterJarRequest) modsFor(existing *GrainWaterJar, acl AclField) (bson.D, error) {
@@ -138,7 +138,7 @@ func (req updateGrainWaterJarRequest) modsFor(existing *GrainWaterJar, acl AclFi
 }
 
 func updateGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
-	_, id, err := mainCollIdFromRequest(r, w)
+	_, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

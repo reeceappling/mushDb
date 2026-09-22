@@ -533,7 +533,7 @@ type resolvedUpdatePlateRequest struct {
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := &updatePlateRequest{}
-	b58Id, id, err := mainCollIdFromRequest(r, w)
+	b58Id, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

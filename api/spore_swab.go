@@ -257,7 +257,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := updateSporeSwabRequest{}
 
-	b58Id, id, err := mainCollIdFromRequest(r, w)
+	b58Id, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

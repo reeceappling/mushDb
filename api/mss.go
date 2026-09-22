@@ -257,7 +257,7 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateMssRequest{}
 	defer r.Body.Close()
-	b58Id, id, err := mainCollIdFromRequest(r, w)
+	b58Id, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

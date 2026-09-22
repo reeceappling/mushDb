@@ -250,7 +250,7 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSyringeRequest{}
-	b58Id, id, err := mainCollIdFromRequest(r, w)
+	b58Id, id, err := MainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}

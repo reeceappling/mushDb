@@ -422,9 +422,11 @@ type updateLiquidCultureRequest struct {
 	NotesUpdateField
 	KnownFruitableField
 	DisposedField
-	ConfirmedClean *bool                                                    `json:"confirmedClean,omitempty"`
-	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
+	ConfirmedCleanField
+	ImagesUpdateField
+	ContamsUpdateField
+	//Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	//Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	PermsOnRequest `json:"acl"`
 }
 

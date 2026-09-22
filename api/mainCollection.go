@@ -117,7 +117,7 @@ type FlushesUpdateField struct {
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"flushes"` //"newFlush-1"
 }
 
-func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id MainCollectionId, err error) {
+func MainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id MainCollectionId, err error) {
 	var idStr string
 	idStr, err = UrlDecodeString(r.PathValue("id"))
 	if err != nil {

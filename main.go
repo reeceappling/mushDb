@@ -329,6 +329,16 @@ func main() {
 	//http.Handle("/biometrics/fingerprint/register-challenge", CorsAuthMiddleware(rateLimitCtxMiddleware(biometricFingerprintRegisterChallengeHandler))) // TODO: change middlewares and handler
 	//http.Handle("/biometrics/fingerprint/verify-challenge", CorsAuthMiddleware(rateLimitCtxMiddleware(biometricFingerprintVerifyChallengeHandler)))     // TODO: change middlewares and handler
 
+	println("Defining admin handlers")
+	whitelistuserGoHandler := Middlewares(wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler) // TODO: validate works
+	println("Defining admin endpoints")
+	// TODO: refer to post side of /whitelistUser... http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, OptionsPostOnly, wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
+
+	// TODO: ADMIN STUFF
+	// TODO: user-viewer/editor for admin
+	// TODO: need to be able to create new users
+
+	println("Defining webserver proxy endpoints")
 	// Proxied to react
 	// Generalized react endpoints
 	// TODO: add context middleware or tracer middleware?
@@ -344,7 +354,6 @@ func main() {
 	http.Handle("/error/{errTxt}", Middlewares(tracerMiddleware("/err"), OptionsGetOnly /* TODO: ensure ok*/)(webProxyHandler)) // TODO: rate limit???? ctx middleware? auth middleware? // TODO: options middleware?
 	http.Handle("/testpage", Middlewares(tracerMiddleware("/testpage"), OptionsGetOnly /* TODO: ensure ok*/)(webProxyHandler))  // GET testpage is here (test page)       // TODO: REMOVE // TODO: options middleware?
 	// Admin pages (and admin backend endpoints)
-	whitelistuserGoHandler := Middlewares(wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)                                                                                   // TODO: validate works
 	http.Handle("/whitelistUser", Middlewares(tracerMiddleware("/whitelistUser"), OptionsGetPost /* TODO: ensure ok*/)(GetPostSplitterHandler(adminProxied, whitelistuserGoHandler))) // TODO: THIS! // TODO: options middleware?
 
 	println("Defining sensor data endpoints")
@@ -353,13 +362,6 @@ func main() {
 	//http.Handle("/sensorData/{nodeName}", rfid.GetSensorDataHandler())           // TODO: middleware?
 	//http.Handle("/sensorDataSince/{nodeName}", rfid.GetSensorDataSinceHandler()) // TODO: middleware?
 	//http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
-
-	println("Defining admin endpoints")
-	// TODO: refer to post side of /whitelistUser... http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, OptionsPostOnly, wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
-
-	// TODO: ADMIN STUFF
-	// TODO: user-viewer/editor for admin
-	// TODO: need to be able to create new users
 
 	println("Defining db interaction endpoints")
 	// TODO: CORS db middlewares?
@@ -395,6 +397,11 @@ func main() {
 		// TODO: set server health to bad?
 		panic("failed to listen and serve for http: " + err.Error())
 	}
+
+	//srv.AddTransport(transport.MultipartForm{ // TODO: THIS!
+	//	MaxUploadSize: 32 << 20, // 32 MB maximum total upload size
+	//	MaxMemory:     32 << 20, // 32 MB allocated in memory before caching to disk
+	//})
 }
 func setupEnvironment(ctxIn context.Context) context.Context {
 	var envir string

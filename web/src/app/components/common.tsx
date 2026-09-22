@@ -593,7 +593,7 @@ export function resolveContamsFormData(inp: SplitAllEntries<ContaminationForm, N
 
 export function setFormImages(filePrefix: string, formData: FormData, pics: any[]) {
     for (let i = 0; i < pics.length; i++) {
-        const fileName = filePrefix + "-" + i
+        const fileName = `${filePrefix}-${i}`
         if (pics[i] === undefined) {
             console.error("Picture undefined, " + fileName) // TODO: DEL
             continue

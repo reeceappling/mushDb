@@ -342,7 +342,8 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) {
 type updateFruitRequest struct {
 	DisposedField
 	NotesUpdateField
-	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	ImagesUpdateField //"newPic-1"
+	// TODO: ensure works. was: Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	PermsOnRequest `json:"acl"`
 }
 
