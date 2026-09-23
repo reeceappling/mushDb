@@ -641,16 +641,18 @@ func MiddlewareAuthOnContext(next http.Handler, notLoggedInHandler http.Handler,
 			sess, err = svc.TryToReAuth(r.Context(), sessionId)
 			if err != nil {
 				env.LogIfDev(ctx, "failed to reAuth: "+err.Error())
+				var tempHandler http.Handler = next
 				if errors.Is(err, ErrBlankSessionKey) || errors.Is(err, utils.NotFound) {
 					if notLoggedInHandler != nil {
-						notLoggedInHandler.ServeHTTP(w, r)
+						tempHandler = notLoggedInHandler
 					} else {
-						next.ServeHTTP(w, r)
+						tempHandler = next // TODO: will not have authInfo available
 					}
-					return
+				} else {
+					tempHandler = errorHandler(err)
 				}
 
-				errorHandler(err).ServeHTTP(w, r)
+				tempHandler.ServeHTTP(w, r)
 				return
 			}
 		}

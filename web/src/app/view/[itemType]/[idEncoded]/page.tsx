@@ -52,88 +52,100 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const session = cookieStore.get('_gothic_session')
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     const decoded = decodeURI(idEncoded)
-    let desc = getData(itemType, idEncoded, allCookies).then(resultData=>{
+    const {doIndex, desc} = await getData(itemType, idEncoded, allCookies).then(resultData=>{
+        const dind = resultData.doIndex
         switch(itemType){
             case 'agarBatch':
-                return (new AgarBatchData(resultData)).description()
+                return {doIndex:dind,desc:(new AgarBatchData(resultData.data)).description()}
             case 'agarRecipe':
-                return (new AgarRecipeData(resultData)).description()
+                return {doIndex:dind,desc:(new AgarRecipeData(resultData.data)).description()}
             case 'bag':
-                return (new BagData(resultData)).description()
+                return {doIndex:dind,desc:(new BagData(resultData.data)).description()}
             case 'fruit':
-                return (new FruitData(resultData)).description()
+                return {doIndex:dind,desc:(new FruitData(resultData.data)).description()}
             case 'fruitingChamber':
-                return (new FruitingChamberData(resultData)).description()
+                return {doIndex:dind,desc:(new FruitingChamberData(resultData.data)).description()}
             case 'grainBatch':
-                return (new GrainBatchData(resultData)).description()
+                return {doIndex:dind,desc:(new GrainBatchData(resultData.data)).description()}
             case 'jar':
-                return (new JarData(resultData)).description()
+                return {doIndex:dind,desc:(new JarData(resultData.data)).description()}
             case 'jarRecipe':
-                return (new JarRecipeData(resultData)).description()
+                return {doIndex:dind,desc:(new JarRecipeData(resultData.data)).description()}
             case 'lc':
-                return (new LcData(resultData)).description()
+                return {doIndex:dind,desc:(new LcData(resultData.data)).description()}
             case 'lcRecipe':
-                return (new LcRecipeData(resultData)).description()
+                return {doIndex:dind,desc:(new LcRecipeData(resultData.data)).description()}
             case 'lcSyringe':
-                return (new LcSyringeData(resultData)).description()
+                return {doIndex:dind,desc:(new LcSyringeData(resultData.data)).description()}
             case 'mss':
-                return (new MssData(resultData)).description()
+                return {doIndex:dind,desc:(new MssData(resultData.data)).description()}
             case 'pcRun':
-                return (new PcRunData(resultData)).description()
+                return {doIndex:dind,desc:(new PcRunData(resultData.data)).description()}
             case 'plate':
-                return (new PlateData(resultData)).description()
+                return {doIndex:dind,desc:(new PlateData(resultData.data)).description()}
             case 'plugs':
-                return (new PlugsData(resultData)).description()
+                return {doIndex:dind,desc:(new PlugsData(resultData.data)).description()}
             case 'project':
-                return (new ProjectData(resultData)).description()
+                return {doIndex:dind,desc:(new ProjectData(resultData.data)).description()}
             case 'sale':
-                return (new SaleData(resultData)).description()
+                return {doIndex:dind,desc:(new SaleData(resultData.data)).description()}
             case 'slant':
-                return (new SlantData(resultData)).description()
+                return {doIndex:dind,desc:(new SlantData(resultData.data)).description()}
             case 'species':
-                return (new SpeciesData(resultData)).description()
+                return {doIndex:dind,desc:(new SpeciesData(resultData.data)).description()}
             case 'sporePrint':
-                return (new SporePrintData(resultData)).description()
+                return {doIndex:dind,desc:(new SporePrintData(resultData.data)).description()}
             case 'sporeSwab':
-                return (new SporeSwabData(resultData)).description()
+                return {doIndex:dind,desc:(new SporeSwabData(resultData.data)).description()}
             case 'stasisTube':
-                return (new StasisTubeData(resultData)).description()
+                return {doIndex:dind,desc:(new StasisTubeData(resultData.data)).description()}
             case 'subspecies':
-                return (new SubspeciesData(resultData)).description()
+                return {doIndex:dind,desc:(new SubspeciesData(resultData.data)).description()}
             case 'substrateBatch':
-                return (new SubstrateBatchData(resultData)).description()
+                return {doIndex:dind,desc:(new SubstrateBatchData(resultData.data)).description()}
             case 'substrateRecipe':
-                return (new SubstrateRecipeData(resultData)).description()
+                return {doIndex:dind,desc:(new SubstrateRecipeData(resultData.data)).description()}
             case 'transfer':
-                return (new TransferData(resultData)).description()
+                return {doIndex:dind,desc:(new TransferData(resultData.data)).description()}
             case 'user':
-                return (new UserData(resultData)).description()
+                return {doIndex:dind,desc:(new UserData(resultData.data)).description()}
             case 'waterJar':
-                return (new WaterJarData(resultData)).description()
+                return {doIndex:dind,desc:(new WaterJarData(resultData.data)).description()}
             default:
-                return "error: unknown item type"
+                return {doIndex:dind,desc:"error: unknown item type"}
         }
     }).catch(e=>{
-        return "error: "+JSON.stringify(e)
+        return {doIndex:false,desc:"error: "+JSON.stringify(e)} // TODO: false ok here?
     })
 
-    if (itemType == "species" || itemType == "subspecies") {
-        return {
-            title: decoded,
-            // title: { // TODO: ???
-            //     absolute: decoded,
-            // },
-            description: await desc,
-        };
-    }
     return {
-        title: itemType+` `+decoded,
+        title: (itemType == "species" || itemType == "subspecies")?decoded:`${itemType} ${decoded}`,
+        // title: { // TODO: ???
+        //     absolute: decoded,
+        // },
         description: await desc,
+        alternates: {
+            canonical: BaseExternalUrl+`/view/${itemType}/${idEncoded}`,
+            languages: {
+                "en-US": BaseExternalUrl+`/view/${itemType}/${idEncoded}`,
+            }
+        },
+        robots: {
+            index: doIndex,
+            follow: true,
+            // Optional finer control:
+            nocache: true,
+        },
     };
 }
 
-const getData: (a1:string,a2:string,allCookies:string)=>Promise<any> = async (itemTypeA: string, idEnc: string,allCookies:string) => {
-    return new Promise<React.JSX.Element>((accept, reject) => {
+export interface ReactElementWithDoIndex {
+    data: React.JSX.Element
+    doIndex: boolean
+}
+
+const getDataResponse: (a1:string,a2:string,allCookies:string)=>Promise<Response> = async (itemTypeA: string, idEnc: string,allCookies:string) => {
+    return new Promise<Response>((accept, reject) => {
         fetch(BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc, {
             method: 'Get',
             credentials: 'include',
@@ -143,25 +155,46 @@ const getData: (a1:string,a2:string,allCookies:string)=>Promise<any> = async (it
                 'Cookie': allCookies, // REQUIRED // TODO: can we drop this because we have included creds? TRY IT
                 // TODO: set Origin header to web? or should this be BaseExternalUrl?
             },
-        }).then(res => {
-            console.log("got response " + JSON.stringify(res))
+        }).then(res=>{
             if (!res.ok) {
-                return res.text().then(txt => {
-                    throw new Error("response not ok: " + txt + ". Status " + res.status)
-                }).catch(err => {
-                    throw new Error("response not ok and failed to decode: " + JSON.stringify(err) + ". Status " + res.status)
+                res.text().then(txt=>{
+                    reject("response not ok: " +  + ". Status " + res.status)
+                }).catch(e=>{
+                    reject(e)
                 })
+                return
             }
-            res.json().then((data) => {
-                console.log(data)
-                accept(data)
-            }).catch(err1 => {
-                console.log("failed to resolve json data from result, " + JSON.stringify(err1))
-                reject(err1)
-            })
+            accept(res)
         }).catch(err1 => {
             reject(err1)
         })
+    })
+}
+
+const getData: (a1:string,a2:string,allCookies:string)=>Promise<{doIndex:boolean,data:any}> = async (itemTypeA: string, idEnc: string,allCookies:string) => {
+    const res = await getDataResponse(itemTypeA,idEnc,allCookies)
+    console.log("got response " + JSON.stringify(res))
+    if (!res.ok) {
+        throw new Error("response not ok: " + await res.text() + ". Status " + res.status)
+    }
+    return await getDataResponseToObject(res)
+    // res.json().then((data) => {
+    //     console.log(data)
+    //     accept(data)
+    // }).catch(err1 => {
+    //     console.log("failed to resolve json data from result, " + JSON.stringify(err1))
+    //     reject(err1)
+    // })
+}
+
+async function getDataResponseToObject(res: Response):Promise<{doIndex:boolean,data:any}> {
+    return await res.json().then((data) => {
+        const doIndexHeader = res.headers.get('doIndex')
+        console.log(data)
+        return {doIndex: doIndexHeader==="true",data:data}
+    }).catch(err1 => {
+        console.log("failed to resolve json data from result, " + JSON.stringify(err1))
+        throw err1
     })
 }
 
@@ -179,7 +212,7 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
     try {
-        const data = await getData(itemType, idEncoded, allCookies)
+        const {data} = await getData(itemType, idEncoded, allCookies)
         const readers = await GetReaderWriterNames() // Done on the server
         return <PageWrapper props={{pageType: "view", readers: readers}}>
             <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>

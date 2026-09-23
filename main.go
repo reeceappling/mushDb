@@ -847,8 +847,7 @@ var isLoggedInInternalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *
 		return
 	}
 	acctType := auth.AccountType
-
-	resp := isLoggedInResponse{
+	resp := isLoggedInResponse{ // TODO: make this just return perms?
 		UserType: acctType.String(),
 	}
 	if !acctType.IsGuest() {
@@ -870,8 +869,21 @@ func isLoggedInErrorHandler(e error) http.Handler { // TODO: validate works the 
 	})
 }
 
-var isLoggedInNotLoggedInHandler http.Handler = nil                                                                                  // TODO: ensure ok
+var isLoggedInNotLoggedInHandler http.Handler = nil                                                                                  // TODO: what here?                                                                              // TODO: ensure ok
 var handleIsLoggedIn = rfid.MiddlewareAuthOnContext(isLoggedInInternalHandler, isLoggedInNotLoggedInHandler, isLoggedInErrorHandler) // TODO: validate works correctly!
+//var handleGetMyPermissionsError = func(e error)http.Handler{
+//	errTxt := "failed to get permissions"
+//	status := http.StatusNotFound
+//	if e != nil {
+//		errTxt += ": " + e.Error()
+//		status = http.StatusInternalServerError
+//	}
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		http.Error(w, errTxt, status)
+//		return
+//	})
+//}
+//var handleGetMyPermissions = rfid.MiddlewareAuthOnContext(isLoggedInInternalHandler, handleGetMyPermissionsError(nil), handleGetMyPermissionsError) // TODO: validate works correctly!
 //func handleTestLogin(w http.ResponseWriter, r *http.Request) {
 //	ctx := r.Context()
 //	email, err := rfid.UrlDecodeString(r.PathValue("emailEncoded"))
@@ -1611,6 +1623,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		if out.Private {
+			w.Header().Set("doIndex", "false")
+		} else {
+			w.Header().Set("doIndex", "true")
+		}
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
 		// TODO: handle alternate names? Return a link to the proper page?
 		var blankItem rfid.PermissionedAltCollectionItem[string]
@@ -1647,7 +1664,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		if out.Permissions().BlanketPerm.CanRead() {
+			w.Header().Set("doIndex", "true") // TODO: VALIDATE WORKING!!!!! only index fully public pages?
+		} else {
+			w.Header().Set("doIndex", "false") // TODO: VALIDATE WORKING!!!!! only index fully public pages?
+		}
 	case "user": // User (can have @)
+		w.Header().Set("doIndex", "false")
 		// Get the requested user
 		decodedId, err := rfid.UrlDecodeString(id)
 		if err != nil {
@@ -1771,6 +1794,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		if out.Permissions().BlanketPerm.CanRead() {
+			w.Header().Set("doIndex", "true")
+		} else {
+			w.Header().Set("doIndex", "false")
+		}
 		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
 		//if err != nil {
 		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
@@ -1815,6 +1843,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		if err != nil {
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
+		}
+		if out.Permissions().BlanketPerm.CanRead() {
+			w.Header().Set("doIndex", "true")
+		} else {
+			w.Header().Set("doIndex", "false")
 		}
 		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
 		//if err != nil {

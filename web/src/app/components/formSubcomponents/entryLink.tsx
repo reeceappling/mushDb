@@ -2,6 +2,7 @@
 
 import { ReactNode} from "react";
 import {Entry, EntryUrlId, viewUrlFor} from "@/app/components/common";
+import Link from "next/link";
 
 export default function EntryLinkForId(
     {
@@ -55,7 +56,8 @@ export function EntryLinkIdWrapper(
     }
     const actualLink = viewUrlFor(props.entryType, props.linkId)
     if (props.openInNewTab===true){
-        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
+        // TODO: prefetching? return <Link to={"/view/${props.entryType}/${props.linkId}"} target={"_blank"} rel={"noopener noreferrer"}>{children}</Link>
+        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
             {children}
         </a>
     }

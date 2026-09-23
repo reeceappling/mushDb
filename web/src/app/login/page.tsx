@@ -2,6 +2,7 @@ import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
 import {Metadata} from "next";
+import {BaseExternalUrl} from "@/app/components/Constants";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -10,6 +11,17 @@ import {Metadata} from "next";
 export const metadata: Metadata = {
     title: `login`,
     description: "Login page",
+    alternates: {
+        canonical: `${BaseExternalUrl}/login`,
+        languages: {
+            "en-US": `${BaseExternalUrl}/login`,
+        }
+    },
+    robots: {
+        index: true,
+        follow: true,
+        nocache: false,
+    },
 };
 
 export default async function Page({

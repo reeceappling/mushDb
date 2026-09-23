@@ -22,15 +22,33 @@ type Props = {
 // Next.js runs this first to set the tab title
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const {itemType, species} = await params
+    const canonicalUrl = `${BaseExternalUrl}/new/${itemType}`
     if (itemType === "subspecies" && species !== undefined && species.length > 0) {
         return {
             title: `subspecies creator`,
             description: "Area for creating a new subspecies in the database",
+            alternates: {
+                canonical: canonicalUrl,
+                languages: {
+                    "en-US": canonicalUrl,
+                }
+            },
+            robots: {
+                index: true,
+                follow: true,
+                nocache: false,
+            },
         };
     }
     return {
         title: itemType+` creator`,
         description: "Area for creating a new "+itemType+" in the database",
+        alternates: {
+            canonical: canonicalUrl,
+            languages: {
+                "en-US": canonicalUrl,
+            }
+        }
     };
 }
 

@@ -2,7 +2,7 @@ import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
 import {Metadata} from "next";
-import {mushDbTitle} from "@/app/components/Constants";
+import {BaseExternalUrl, mushDbTitle} from "@/app/components/Constants";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
@@ -15,6 +15,17 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 export const metadata: Metadata = {
     title: `Privacy Policy`,
     description: "Privacy Policy",
+    alternates: {
+        canonical: `${BaseExternalUrl}/policies`,
+        languages: {
+            "en-US": `${BaseExternalUrl}/policies`,
+        }
+    },
+    robots: {
+        index: true,
+        follow: true,
+        nocache: false,
+    },
 };
 
 export default async function Page() {

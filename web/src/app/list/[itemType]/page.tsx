@@ -19,9 +19,24 @@ type Props = {
 // Next.js runs this first to set the tab title
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     const {itemType} = await params
+    let descPlural = itemType
+    if (itemType != "mss" && itemType != "species" && itemType != "subspecies") { // TODO: maybe more
+        descPlural += "s"
+    }
     return {
         title: itemType + ` list`,
-        description: "List page for all " + itemType + "s" // TODO: msss, speciess, and subspeciess are incorrect here. maybe more
+        description: "List page for all " + descPlural,
+        alternates: {
+            canonical: `${BaseExternalUrl}/list/${itemType}`,
+            languages: {
+                "en-US": `${BaseExternalUrl}/list/${itemType}`,
+            }
+        },
+        robots: {
+            index: true, // TODO: true or false?
+            follow: true,
+            nocache: true,
+        },
     };
 }
 

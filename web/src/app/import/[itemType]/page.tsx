@@ -5,7 +5,7 @@ import {cookies} from "next/headers";
 import {ImportArea} from "@/app/import/[itemType]/client";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {Metadata} from "next";
-import {mushDbTitle} from "@/app/components/Constants";
+import {BaseExternalUrl, mushDbTitle} from "@/app/components/Constants";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -19,7 +19,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const {itemType} = await params
     return {
         title: itemType+` import`,
-        description: "import a new "+itemType+" entry into the database"
+        description: "import a new "+itemType+" entry into the database",
+        alternates: {
+            canonical: `${BaseExternalUrl}/import/${itemType}`,
+            languages: {
+                "en-US": `${BaseExternalUrl}/import/${itemType}`,
+            }
+        },
+        robots: {
+            index: true,
+            follow: true,
+            nocache: false,
+        },
     };
 }
 export default async function Page({

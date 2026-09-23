@@ -4,6 +4,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import React from "react";
 import "@/app/ui/policies.css"
+import {BaseExternalUrl} from "@/app/components/Constants";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -25,6 +26,17 @@ export async function generateMetadata(
     return {
         title: capitalized,
         description: capitalized,
+        alternates: {
+            canonical: `${BaseExternalUrl}/policies/${policy}`,
+            languages: {
+                "en-US": `${BaseExternalUrl}/policies/${policy}`,
+            }
+        },
+        robots: {
+            index: true,
+            follow: true,
+            nocache: false,
+        },
     }
 }
 
