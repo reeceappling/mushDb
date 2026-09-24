@@ -37,15 +37,17 @@ type transferReason string
 const xferReasonColonized transferReason = "colonized"
 const xferReasonReady transferReason = "ready"
 const xferReasonHarvest transferReason = "harvest"
-
+const xferReasonSporeSwabCreation transferReason = "spore swab creation" // TODO: ok to have spaces? // TODO: new!
+// TODO: which transfer reasons are for normal transfers? Which are for clones? Which are for Creating things like LCS, fruit harvest, etc?
 var transferReasons = map[transferReason]string{ // TODO: move these to autogenned?
-	"outgrew":           "outgrew plate", // TODO: is colonized just this?
-	"contaminated":      "parent was contaminated",
-	"sectoring":         "transferring a specific sector",
-	"age":               "sample is very old",
-	xferReasonColonized: "fully colonized", // TODO: how does this differ from outgrew?
-	xferReasonReady:     "ready",           // TODO: ?????
-	xferReasonHarvest:   "harvest",         // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
+	"outgrew":                   "outgrew plate", // TODO: is colonized just this?
+	"contaminated":              "parent was contaminated",
+	"sectoring":                 "transferring a specific sector",
+	"age":                       "sample is very old",
+	xferReasonColonized:         "fully colonized", // TODO: how does this differ from outgrew?
+	xferReasonReady:             "ready",           // TODO: ?????
+	xferReasonHarvest:           "harvest",         // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
+	xferReasonSporeSwabCreation: string(xferReasonSporeSwabCreation),
 }
 
 var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?

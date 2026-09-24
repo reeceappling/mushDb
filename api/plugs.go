@@ -17,6 +17,7 @@ import (
 )
 
 // sometimes needed for transfers
+// TODO: should a stump entry be created for when plugs innoculate a stump?
 
 type PlugsJar struct {
 	// TODO: DO DOWELS NEED TO BE SOAKED? Nutrients?

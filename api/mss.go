@@ -161,7 +161,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{parent.Species},
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id}, // TODO: should print be updated?
 		NotesField:                        NotesField{data.Notes},
 		LastUpdatedField:                  LastUpdatedField{now},
 		AclField:                          parent.AclField, // do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
@@ -248,7 +248,7 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updatePicsIfNeeded(req.Images, existing.Pics).                                               // TODO: validate working!
+		updatePicsIfNeeded(req.Images, existing.Pics). // TODO: validate working!
 		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)). // TODO: validate working!
 		updateLastUpdatedIfNeeded().
 		Finalized()

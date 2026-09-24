@@ -33,13 +33,14 @@ type SporePrint struct {
 	SporePrintDensityField            `bson:"inline"` // Set later on the print, not on creation, but does get added on import if possible
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
-	PicsField                         `bson:"inline"`
-	SaleField                         `bson:"inline"`
-	DisposedField                     `bson:"inline"`
-	MostRecentImageField              `bson:"inline"`
-	NotesField                        `bson:"inline"`
-	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"`
+	// TODO: MSSs can come from prints. Maybe we allow searching by this spore print?
+	PicsField            `bson:"inline"`
+	SaleField            `bson:"inline"`
+	DisposedField        `bson:"inline"`
+	MostRecentImageField `bson:"inline"`
+	NotesField           `bson:"inline"`
+	LastUpdatedField     `bson:"inline"`
+	AclField             `bson:"inline"`
 }
 
 func (sp SporePrint) Children(ctx context.Context) (out []MainCollectionItem, err error) {

@@ -1,0 +1,64 @@
+---
+name: Run tests
+on:
+  pull_request:
+
+jobs:
+  run-go-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Go
+        uses: actions/setup-go@v5 # TODO: ensure ok
+        with:
+          go-version-file: 'go.mod' # Automatically matches your project's Go version
+          cache: true               # Speeds up runs by caching Go modules and build data
+      - name: Download Dependencies
+        run: go mod download
+      - name: Run Tests
+        run: go test ./...
+  run-ts-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify your preferred Node version # TODO: FIX!
+          cache: 'npm'
+      - name: Install ts dependencies
+        run: npm ci # TODO: ensure ok
+          #      - name: Run TypeScript Build / Tests # TODO; FIX!
+        #        run: npx tsc --noEmit
+      # TODO: run cross-server tests?
+  run-combo-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Go
+        uses: actions/setup-go@v5 # TODO: ensure ok
+        with:
+          go-version-file: 'go.mod' # Automatically matches your project's Go version
+          cache: true               # Speeds up runs by caching Go modules and build data
+      - name: Download Go Dependencies
+        run: go mod download
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify your preferred Node version # TODO: FIX!
+          cache: 'npm'
+      - name: Install ts dependencies
+        run: npm ci # TODO: ensure ok
+      # TODO: what else here?
