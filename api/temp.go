@@ -130,7 +130,7 @@ func (rw *MockRfidSvc) ReadRfid(ctx context.Context, readerName shared.RfidReade
 
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	if id == "1" { // TODO: DO THIS ELSEWHERE!
-		println("making ID 1!")
+		println("making ID 1!")                                                     // TODO: should this be 0???? IS THIS REFERENCED ANYWHERE?
 		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
 	realId, err := Base58Str(id).ToMainCollectionId()
@@ -150,7 +150,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
-	println("reading mcitem from " + resultItemType.CollectionName())
+	println("reading mcitem from collection: " + resultItemType.CollectionName())
 	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
@@ -424,11 +424,4 @@ func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, da
 
 //func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
 //	return primitive.ObjectID(id).Timestamp()
-//}
-//
-//func Ternary[T any](val bool, ifTrue, ifFalse T) T {
-//	if val {
-//		return ifTrue
-//	}
-//	return ifFalse
 //}

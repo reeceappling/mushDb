@@ -7,6 +7,7 @@ import (
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -68,8 +69,8 @@ var sporePrintDensities = []SporePrintDensity{ // TODO: move these to autogenned
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
 	AlternateCollectionIdField `bson:"inline"`
 	From                       MainCollectionId `bson:"from" json:"from"`
-	To                         MainCollectionId `bson:"to" json:"to"` // fruit is mainCollectionId
-	FromType                   string           `json:"fromType"`     //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	To                         MainCollectionId `bson:"to" json:"to"` // TODO: make notes here?
+	FromType                   string           `json:"fromType"`     //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box, etc
 	ToType                     string           `json:"toType"`       //sourceType
 	CreationDateField          `bson:"inline"`
 	Reason                     transferReason `bson:"reason" json:"reason"`
@@ -95,28 +96,26 @@ func (xfersOut TransfersOutField) getTransfersChildren(ctx context.Context) (out
 	}
 	return out, nil
 }
-
-func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
-	if t.ToImage == nil {
-		return NewMods()
-	}
-	pic := newPicWithNotes(t.CreationDate, []Note{
-		// TODO: note?
-	}, *t.ToImage)
-	return NewMods().
-		withMostRecentImage(&pic).
-		withPics(child.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
+func transferPicMod(creationDate unix.Time, imgLoc ImageLocation, notes []Note) PicWithNotes {
+	return newPicWithNotes(creationDate, notes, imgLoc)
 }
-func (t Transfer) PicsModsForParent(parent HasPicsField) *Mods {
-	if t.FromImage == nil {
-		return NewMods()
+func (t Transfer) picMods(item HasPicsField, loc *ImageLocation) *Mods {
+	out := NewMods()
+	if loc == nil {
+		return out
 	}
-	pic := newPicWithNotes(t.CreationDate, []Note{
-		// TODO: note?
-	}, *t.FromImage)
+	pic := transferPicMod(t.CreationDate, *loc, []Note{ /*TODO: note?*/ })
 	return NewMods().
 		withMostRecentImage(&pic).
-		withPics(parent.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
+		withPics(item.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
+	// TODO: does this need update timestamp?
+}
+
+func (t Transfer) PicsModsForParent(parent HasPicsField) *Mods {
+	return t.picMods(parent, t.FromImage)
+}
+func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
+	return t.picMods(child, t.ToImage)
 }
 
 // Perms have not been checked when this runs yet

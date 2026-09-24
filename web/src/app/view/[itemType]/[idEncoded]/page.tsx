@@ -212,7 +212,7 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
     try {
-        const {data} = await getData(itemType, idEncoded, allCookies)
+        const {doIndex, data} = await getData(itemType, idEncoded, allCookies)
         const readers = await GetReaderWriterNames() // Done on the server
         return <PageWrapper props={{pageType: "view", readers: readers}}>
             <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
