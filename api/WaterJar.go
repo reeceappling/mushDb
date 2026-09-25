@@ -27,12 +27,16 @@ type WaterJar struct {
 	AclField              `bson:"inline"`
 }
 
-func (wj WaterJar) Children(ctx context.Context) ([]MainCollectionItem, error) {
-	// TODO: return nothing???? maybe water jar shouldnt even be an option?
-	panic("water jar children tracking not implemented")
+func (wj *WaterJar) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{
+		PcRun: &wj.PcRun,
+	}, nil
 }
-func (wj WaterJar) GetParent(ctx context.Context) (MainCollectionItem, error) {
-	return nil, errors.New("water jars cannot have parents")
+
+func (wj WaterJar) Children(ctx context.Context) (children ChildrenResult, err error) {
+	// TODO: FIX! WILL HAVE SOME CHILDREN. DO WE WANT TO DO THIS?
+	// TODO: get MSS children, as well as stasis tube children!
+	panic("water jar children tracking not implemented")
 }
 
 func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {

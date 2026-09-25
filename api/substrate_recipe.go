@@ -37,6 +37,10 @@ type SubstrateRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+func (s *SubstrateRecipe) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{}, nil // Returns nothing
+}
+
 //func (s SubstrateRecipe) Blank() CollectionItem {
 //	return &SubstrateRecipe{}
 //}

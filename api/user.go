@@ -19,6 +19,12 @@ type User struct {
 	// All can view?
 }
 
+var errInvalidGetParentEntryType = errors.New("invalid GetParent EntryType")
+
+func (u *User) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult()
+}
+
 //func (u User) Blank() CollectionItem {
 //	return &User{}
 //}

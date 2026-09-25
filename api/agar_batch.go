@@ -29,6 +29,14 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	GrainWaterJarsField `bson:"inline"`
 }
 
+func (ab *AgarBatch) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{
+		PcRun:               &ab.PcRun,
+		AgarRecipe:          &ab.AgarRecipe,
+		GrainWaterJarsField: ab.GrainWaterJarsField,
+	}, nil
+}
+
 func (ab *AgarBatch) recipeId() AlternateCollectionId {
 	return ab.AgarRecipe
 }
@@ -97,7 +105,8 @@ func initializeAgarBatches(ctx context.Context) error {
 	coll := db.Collection(AgarBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
-		newSimpleIndex("agarRecipe", "agarRecipe", false, false, false), // Required for deleting agar batches
+		newSimpleIndex("agarRecipe", "agarRecipe", false, false, false),        // Required for deleting agar batches
+		newSimpleIndex("grainWaterJars", "grainWaterJars", false, true, false), // TODO: ensure works!
 		//newSimpleIndex("color", "color", false, false, false),
 		projectsIndexModel,
 		lastUpdatedIndexModel,

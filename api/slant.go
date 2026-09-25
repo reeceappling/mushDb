@@ -42,15 +42,30 @@ type Slant struct {
 	AclField                          `bson:"inline"`
 }
 
-func (s Slant) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := s.getTransfersChildren(ctx)
+func (s *Slant) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := s.MainCollectionOptionalParentField.GetParent(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
+	out.AgarBatch = s.AgarBatch
+	// TODO: agar recipe?
+	// TODO: grainwater jars?
+	// TODO: pcRun?
 	return out, nil
+}
+
+func (s Slant) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = s.getTransfersChildren(ctx)
+	if err != nil {
+		return children, err
+	}
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, s.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
@@ -137,7 +152,7 @@ func initializeSlants(ctx context.Context) error {
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!         // TODO: nil is store or outside?
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 
 		//Pics (no index)

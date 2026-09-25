@@ -33,6 +33,8 @@ type SporePrint struct {
 	SporePrintDensityField            `bson:"inline"` // Set later on the print, not on creation, but does get added on import if possible
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
+	// TODO: ADD TransfersOutField `bson:"inline"` // Only for print->plate/slant/stasisTube? Maybe could go to box or bag? // TODO: also figure this out on the typescript side!
+
 	// TODO: MSSs can come from prints. Maybe we allow searching by this spore print?
 	PicsField            `bson:"inline"`
 	SaleField            `bson:"inline"`
@@ -43,16 +45,70 @@ type SporePrint struct {
 	AclField             `bson:"inline"`
 }
 
-func (sp SporePrint) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	//xfersOutChildren, err := sp.getTransfersChildren(ctx) // TODO: ADD TRANSFERS FIELD FOR print->plate?
-	//if err != nil {
-	//	return nil, err
+//func (sp *SporePrint) GetParent(ctx context.Context) (ParentResult, error) { // Covered by GetParent on parentField
+//	out, err := sp.MainCollectionOptionalParentField.GetParent(ctx)
+//	if err != nil {
+//		return out, err
+//	}
+//	return out, nil
+//}
+
+func (sp SporePrint) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children = ChildrenResult{}
+	db := DbFrom(ctx)
+	// Get all plates
+	curs, err := db.Collection(PlatesCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return children, err
+	}
+	err = curs.All(ctx, &children.Plates)
+	if err != nil {
+		return children, err
+	}
+	// Get all slants
+	cursSlant, err := db.Collection(SlantsCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return children, err
+	}
+	err = cursSlant.All(ctx, &children.Plates)
+	if err != nil {
+		return children, err
+	}
+	// Get all spore swabs // TODO: get this from transfers once implemented!
+	cursSwab, err := db.Collection(SporeSwabCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return children, err
+	}
+	err = cursSwab.All(ctx, &children.SporeSwabs)
+	if err != nil {
+		return children, err
+	}
+	// Get all MSS
+	cursMss, err := db.Collection(MssCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return children, err
+	}
+	err = cursMss.All(ctx, &children.Msss)
+	if err != nil {
+		return children, err
+	}
+	// TODO: GET STASIS TUBES????
+	// TODO: any more?
+	return children, err
+	//for item, err := range cursorIterator[*SporePrint](ctx, curs) {
+	//	if err != nil {
+	//		return children, err
+	//	}
+	//	children.SporePrints = append(children.SporePrints, item)
 	//}
-	//out = append(out, xfersOutChildren...)
-	// TODO: check spore swabs
-	// TODO: check MSS
-	return out, nil
+	////xfersOutChildren, err := sp.getTransfersChildren(ctx) // TODO: ADD TRANSFERS FIELD FOR print->plate? Plate will not have an innoc if we dont do this!
+	////if err != nil {
+	////	return nil, err
+	////}
+	////out = append(out, xfersOutChildren...)
+	//// TODO: check spore swabs
+	//// TODO: check MSS
+	//return out, nil
 }
 
 type SporePrintColor string
@@ -257,7 +313,7 @@ func initializeSporePrints(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(SporePrintCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel, // This is print date
-		//newSimpleIndex("parent", "parent", false, false, false), // Fruits have a prints field on them.
+		//newSimpleIndex("parent", "parent", false, false, false),// TODO: INDEX IF USED! // Fruits have a prints field on them.
 		//newSimpleIndex("color", "color", true, true, false),
 		//newSimpleIndex("density", "density", true, true, false),
 		newSimpleIndex("species", "species", false, false, false),

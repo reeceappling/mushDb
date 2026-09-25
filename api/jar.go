@@ -23,9 +23,9 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
-	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
-	JarRecipeField          `bson:"inline"` // Always required except on imports when it is optional
-	GrainBatchOptionalField `bson:"inline"` // Jar references batch which references recipe. Recipes can have multiple grains.
+	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
+	JarRecipeField          `bson:"inline"`                       // Always required except on imports when it is optional
+	GrainBatchOptionalField `bson:"inline"`                       // Jar references batch which references recipe. Recipes can have multiple grains.
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
@@ -49,19 +49,33 @@ type GrainJar struct {
 	AclField                          `bson:"inline"`
 }
 
+func (j *GrainJar) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := j.MainCollectionOptionalParentField.GetParent(ctx)
+	if err != nil {
+		return out, err
+	}
+	out.GrainBatch = j.GrainBatch
+	out.JarRecipe = j.Recipe
+	out.PcRun = j.PcRun
+	return out, nil
+}
+
 type BurstGrainsField struct { // 0 is none, 10 is most or all
 	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"`
 }
 
-func (j GrainJar) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := j.getTransfersChildren(ctx)
+func (j GrainJar) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = j.getTransfersChildren(ctx)
 	if err != nil {
-		return nil, err
+		return children, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
-	return out, nil
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, j.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
@@ -153,7 +167,7 @@ func initializeJars(ctx context.Context) error {
 			//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 			//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 			//transfersOutIndexModel,
-			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside? FINALIZE
+			//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!         // TODO: nil is store or outside? FINALIZE
 			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside? FINALIZE
 			//Pics (no index)
 			//Contams?

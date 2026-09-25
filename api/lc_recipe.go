@@ -27,6 +27,10 @@ type LcRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+func (recipe *LcRecipe) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{}, nil // Returns nothing
+}
+
 //func (l LcRecipe) Blank() CollectionItem {
 //	return &LcRecipe{}
 //}

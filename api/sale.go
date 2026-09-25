@@ -220,6 +220,10 @@ type Sale struct { // TODO: THIS IS A LINE ITEM! SHOULD ONLY CONTAIN ONE ITEM! O
 	AclField          `bson:"inline"`
 }
 
+func (s *Sale) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult() // TODO: ok??? or no????
+}
+
 //func (s Sale) Blank() CollectionItem {
 //	return &Sale{}
 //}

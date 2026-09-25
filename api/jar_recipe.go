@@ -52,13 +52,17 @@ type JarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	Grains                     []GrainPercentage `bson:"grains" json:"grains"`
-	StandardField              `bson:"inline"`   // If this is a standard recipe
-	NutrientsField             `bson:"inline"`   // Per grain jar?
-	SugarsField                `bson:"inline"`   // Per grain jar?
-	AdditivesField             `bson:"inline"`   // Per grain jar?
+	StandardField              `bson:"inline"` // If this is a standard recipe
+	NutrientsField             `bson:"inline"` // Per grain jar?
+	SugarsField                `bson:"inline"` // Per grain jar?
+	AdditivesField             `bson:"inline"` // Per grain jar?
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
+}
+
+func (recipe *JarRecipe) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{}, nil // Returns nothing
 }
 
 //func (j JarRecipe) Blank() CollectionItem {

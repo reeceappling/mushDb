@@ -31,6 +31,10 @@ type PCRun struct {
 	AclField                   `bson:"inline"`
 }
 
+func (run *PCRun) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{}, nil // Returns nothing. No Parent // TODO: return user who created? probably not...
+}
+
 //func (p PCRun) Blank() CollectionItem {
 //	return &PCRun{}
 //}

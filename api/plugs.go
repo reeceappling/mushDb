@@ -43,15 +43,27 @@ type PlugsJar struct {
 	AclField                          `bson:"inline"`
 }
 
-func (pl PlugsJar) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := pl.getTransfersChildren(ctx)
+func (pl *PlugsJar) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := pl.MainCollectionOptionalParentField.GetParent(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
+	out.PcRun = pl.PcRun
 	return out, nil
+}
+
+func (pl *PlugsJar) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = pl.getTransfersChildren(ctx)
+	if err != nil {
+		return children, err
+	}
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, pl.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
@@ -173,7 +185,7 @@ func initializePlugs(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!         // TODO: nil is store or outside?
 		// TODO: combo dowel types index?
 		//newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
 		//newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),

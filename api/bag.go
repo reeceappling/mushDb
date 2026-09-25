@@ -28,17 +28,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unix.Time      `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"` // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
-	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"` // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField                   `bson:"inline"` // TODO: properly populate parentType
-	PicsField                         `bson:"inline"` // Updated independently
-	ContaminationsField               `bson:"inline"` // Updated independently
+	SealDate                          *unix.Time `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"`                                                  // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"`                                                  // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"`                                                  // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"`                                                  // set on transfer in
+	InnocField                        `bson:"inline"`                                                  // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"`                                                  // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"`                                                  // Set on transfer in
+	ParentTypeField                   `bson:"inline"`                                                  // TODO: properly populate parentType
+	PicsField                         `bson:"inline"`                                                  // Updated independently
+	ContaminationsField               `bson:"inline"`                                                  // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -47,6 +47,17 @@ type Bag struct {
 	NotesField       `bson:"inline"` // Updated independently
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
+}
+
+func (b *Bag) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := b.MainCollectionOptionalParentField.GetParent(ctx)
+	if err != nil {
+		return out, err
+	}
+	out.SubstrateRecipe = &b.Substrate
+	out.SubstrateBatch = b.SubstrateBatch
+	out.PcRun = &b.PcRun
+	return out, nil
 }
 
 //func (b Bag) Blank() CollectionItem {
@@ -62,15 +73,18 @@ func (b Bag) Innoculatable() error {
 		b.RequireUnknownFruitable(),
 		b.RequireNoInnoculation())
 }
-func (b Bag) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := b.getTransfersChildren(ctx)
+func (b Bag) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = b.getTransfersChildren(ctx)
 	if err != nil {
-		return nil, err
+		return children, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
-	return out, nil
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, b.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
@@ -147,7 +161,7 @@ func initializeBags(ctx context.Context) error {
 		//newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
 		//newSimpleIndex("transfersOut", "transfersOut", false, true, false),
-		//newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		////pics
 		//// contams?

@@ -45,16 +45,89 @@ type LiquidCulture struct {
 	AclField                          `bson:"inline"`
 }
 
-func (l LiquidCulture) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := l.getTransfersChildren(ctx)
+func (lc *LiquidCulture) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := lc.MainCollectionOptionalParentField.GetParent(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
-	// TODO: get lcSyringes? if we dont track transfers
+	out.PcRun = &lc.PcRun
+	out.LcRecipe = &lc.Recipe
+	out.GrainWaterJars = lc.GrainWaterJars
 	return out, nil
+}
+
+type ChildrenResult struct {
+	// MainCollection genetic items
+	Bags             []*Bag             `json:"bags,omitempty"` // TODO: change all to mainColl ids?
+	Fruits           []*Fruit           `json:"fruits,omitempty"`
+	FruitingChambers []*FruitingChamber `json:"fruitingChambers,omitempty"`
+	GrainJars        []*GrainJar        `json:"grainJars,omitempty"`
+	LiquidCultures   []*LiquidCulture   `json:"liquidCultures,omitempty"`
+	LcSyringes       []*LcSyringe       `json:"lcSyringes,omitempty"`
+	Msss             []*MSS             `json:"msss,omitempty"`
+	Plates           []*Plate           `json:"plates,omitempty"`
+	Plugs            []*PlugsJar        `json:"plugs,omitempty"`
+	Slants           []*Slant           `json:"slants,omitempty"`
+	SporePrints      []*SporePrint      `json:"sporePrints,omitempty"`
+	SporeSwabs       []*SporeSwab       `json:"sporeSwabs,omitempty"`
+	StasisTubes      []*StasisTube      `json:"stasisTubes,omitempty"`
+
+	// Non-genetic items
+	AgarBatches         []*AgarBatch  `json:"agarBatches,omitempty"`  // From agar recipes and pc runs
+	GrainBatches        []*GrainBatch `json:"grainBatches,omitempty"` // From grain jar recipes
+	GrainWaterJarsField                                               // From grain batches
+	// TODO: sales?
+	// TODO: Subspecies string           `json:"subspecies,omitempty"` //TODO: From species??
+	SubstrateBatches []MainCollectionId `json:"substrateBatches,omitempty"` // From substrate recipes
+	WaterJar         []MainCollectionId `json:"waterJars,omitempty"`        // From pcRuns
+}
+type ParentResult struct {
+	// Core stuff
+	EntryType string             `json:"entryType,omitempty"` // Missing means not parent (imported)
+	Data      MainCollectionItem `json:"data,omitempty"`
+	// AltCollItems that can combo
+	AgarBatch, AgarRecipe, GrainBatch, JarRecipe, LcRecipe, PcRun, SubstrateRecipe *AlternateCollectionId
+	SubstrateBatchOptionalField
+	// MainCollItems that can combo
+	GrainWaterJarsField
+	WaterJar *MainCollectionId `json:"waterJar,omitempty"`
+}
+
+func fruitsWithParent(ctx context.Context, parent MainCollectionId) ([]*Fruit, error) {
+	out := []*Fruit{}
+	curs, err := DbFrom(ctx).Collection(LcSyringeCollectionName).Find(ctx, bson.D{{"parent", parent}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return out, err
+	}
+	err = curs.All(ctx, &out)
+	return out, err
+}
+
+func (l LiquidCulture) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children = ChildrenResult{}
+	children, err = l.getTransfersChildren(ctx)
+	if err != nil {
+		return children, err
+	}
+
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, l.Id)
+	if err != nil {
+		return children, err
+	} // TODO: if swap to MainCollId, then maybe map instead?
+	children.Fruits = append(children.Fruits, fruits...)
+	// Get LC Syringes
+	curs, err := DbFrom(ctx).Collection(LcSyringeCollectionName).Find(ctx, bson.D{{"parent", l.Id}}) // TODO: ensure parent indexed?
+	if err != nil {
+		return children, err
+	}
+	for lcs, err := range cursorIterator[*LcSyringe](ctx, curs) {
+		if err != nil {
+			return children, err
+		}
+		children.LcSyringes = append(children.LcSyringes, lcs)
+	}
+	return children, nil
 }
 
 func (l *LiquidCulture) recipeId() AlternateCollectionId {
@@ -132,11 +205,12 @@ func initializeLCs(ctx context.Context) error {
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		newSimpleIndex("grainWaterJars", "grainWaterJars", false, true, false), // TODO: ensure works!
 		//newSimpleIndex("innoc", "innoc", false, true, false),
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside? FINALIZE
+		//newSimpleIndex("parent", "parent", false, true, false), // TODO: INDEX IF USED!         // TODO: nil is store or outside? FINALIZE
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside? FINALIZE
 		//Pics (no index)
 		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),

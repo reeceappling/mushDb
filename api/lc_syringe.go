@@ -25,6 +25,7 @@ import (
 type LcSyringe struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
+	// TODO: lc recipe????
 	MainCollectionOptionalParentField `bson:"inline"` // won't exist for imported
 	MostRecentImageField              `bson:"inline"`
 	CreationDateField                 `bson:"inline"` // create or receive date
@@ -42,15 +43,23 @@ type LcSyringe struct {
 	AclField                          `bson:"inline"`
 }
 
-func (lcs LcSyringe) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := lcs.getTransfersChildren(ctx)
+func (lcs *LcSyringe) GetParent(ctx context.Context) (ParentResult, error) {
+	return lcs.MainCollectionOptionalParentField.GetParent(ctx)
+	// TODO: lc recipe?
+}
+
+func (lcs LcSyringe) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = lcs.getTransfersChildren(ctx)
 	if err != nil {
-		return nil, err
+		return children, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits? do we want to?
-	return out, nil
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, lcs.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (lcs LcSyringe) Innoculatable() error {
@@ -98,7 +107,7 @@ func initializeSyringes(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(LcSyringeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//saleIndexModel,

@@ -83,17 +83,103 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-func (xfersOut TransfersOutField) getTransfersChildren(ctx context.Context) (out []MainCollectionItem, err error) {
+func (t *Transfer) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult()
+}
+
+func (xfersOut TransfersOutField) getTransfersChildren(ctx context.Context) (out ChildrenResult, err error) {
 	db := DbFrom(ctx)
-	out = make([]MainCollectionItem, len(xfersOut.TransfersOut))
-	for i, xferid := range xfersOut.TransfersOut {
+	out = ChildrenResult{}
+	for _, xferid := range xfersOut.TransfersOut {
 		var xfer Transfer
 		if err = db.Collection(TransfersCollName).FindOne(ctx, BsonFindFilter(IDfld, xferid)).Decode(&xfer); err != nil {
-			return nil, err
+			return out, err
 		}
-		out[i], err = GetMainCollectionItemWithId(ctx, xfer.To)
+		child, err := GetMainCollectionItemWithId(ctx, xfer.To)
 		if err != nil {
-			return nil, err
+			return out, err
+		}
+		switch child.(type) {
+		case *Bag:
+			item, ok := child.(*Bag)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Bags = append(out.Bags, item)
+		case *Fruit:
+			item, ok := child.(*Fruit)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Fruits = append(out.Fruits, item)
+		case *FruitingChamber:
+			item, ok := child.(*FruitingChamber)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.FruitingChambers = append(out.FruitingChambers, item)
+		case *GrainJar:
+			item, ok := child.(*GrainJar)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.GrainJars = append(out.GrainJars, item)
+		case *LiquidCulture:
+			item, ok := child.(*LiquidCulture)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.LiquidCultures = append(out.LiquidCultures, item)
+		case *LcSyringe:
+			item, ok := child.(*LcSyringe)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.LcSyringes = append(out.LcSyringes, item)
+		case *MSS:
+			item, ok := child.(*MSS)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Msss = append(out.Msss, item)
+		case *Plate:
+			item, ok := child.(*Plate)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Plates = append(out.Plates, item)
+		case *PlugsJar:
+			item, ok := child.(*PlugsJar)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Plugs = append(out.Plugs, item)
+		case *Slant:
+			item, ok := child.(*Slant)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Slants = append(out.Slants, item)
+		case *SporePrint:
+			item, ok := child.(*SporePrint)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.SporePrints = append(out.SporePrints, item)
+		case *SporeSwab:
+			item, ok := child.(*SporeSwab)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.SporeSwabs = append(out.SporeSwabs, item)
+		case *StasisTube:
+			item, ok := child.(*StasisTube)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.StasisTubes = append(out.StasisTubes, item)
+		default:
+			return out, errors.New("unknown child type: " + child.EntryType())
 		}
 	}
 	return out, nil

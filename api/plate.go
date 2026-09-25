@@ -105,15 +105,30 @@ type Plate struct {
 	AclField                            `bson:"inline"`
 }
 
-func (p Plate) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := p.getTransfersChildren(ctx)
+func (p *Plate) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := p.MainCollectionOptionalParentField.GetParent(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
+	out.AgarBatch = p.AgarBatch
+	// TODO: agar recipe?
+	// TODO: grainwater jars?
+	// TODO: pcRun?
 	return out, nil
+}
+
+func (p Plate) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = p.getTransfersChildren(ctx)
+	if err != nil {
+		return children, err
+	}
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, p.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (p Plate) IdValue() any {
@@ -196,7 +211,7 @@ func initializePlates(ctx context.Context) error {
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		//
 		// Pics (no index)

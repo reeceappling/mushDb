@@ -19,14 +19,20 @@ import (
 type GrainBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
 	// TODO: what of different grains that have different timings? think over this.
-	SoakTimeHours          *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
-	BoilTimeMins           *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
-	DryTimeHours           *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
+	SoakTimeHours          *int `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
+	BoilTimeMins           *int `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
+	DryTimeHours           *int `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
 	CreationDateField      `bson:"inline"` // Date of first hydration. also exists in the id
 	JarRecipeRequiredField `bson:"inline"`
 	NotesField             `bson:"inline"`
 	LastUpdatedField       `bson:"inline"`
 	AclField               `bson:"inline"`
+}
+
+func (gb *GrainBatch) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{
+		JarRecipe: &gb.Recipe,
+	}, nil
 }
 
 //func (g *GrainBatch) Blank() CollectionItem {

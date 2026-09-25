@@ -32,6 +32,13 @@ type Project struct {
 	Perms ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
 }
 
+func (p *Project) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult()
+}
+func invalidGetParentEntryTypeResult() (ParentResult, error) {
+	return ParentResult{}, errInvalidGetParentEntryType
+}
+
 //func (p Project) Blank() CollectionItem {
 //	return &Project{}
 //}

@@ -24,6 +24,12 @@ type SubstrateBatch struct {
 	AclField             `bson:"inline"`
 }
 
+func (sb *SubstrateBatch) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{
+		SubstrateRecipe: &sb.Substrate,
+	}, nil
+}
+
 //func (s SubstrateBatch) Blank() CollectionItem {
 //	return &SubstrateBatch{}
 //}

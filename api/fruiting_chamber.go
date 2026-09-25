@@ -46,15 +46,29 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	AclField                          `bson:"inline"`
 }
 
-func (f FruitingChamber) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := f.getTransfersChildren(ctx)
+func (f *FruitingChamber) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := f.MainCollectionOptionalParentField.GetParent(ctx)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get fruits?
+	out.SubstrateRecipe = &f.Substrate
+	out.SubstrateBatch = f.SubstrateBatch
+	//out.PCRun = &f.PcRun // TODO: put pc run on here?
 	return out, nil
+}
+
+func (f FruitingChamber) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = f.getTransfersChildren(ctx)
+	if err != nil {
+		return children, err
+	}
+	// Get fruits
+	fruits, err := fruitsWithParent(ctx, f.Id)
+	if err != nil {
+		return children, err
+	}
+	children.Fruits = append(children.Fruits, fruits...)
+	return children, nil
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
@@ -143,7 +157,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 			//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 			//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 			//transfersOutIndexModel,
-			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+			//newSimpleIndex("parent", "parent", false, true, false),// TODO: INDEX IF USED!         // TODO: nil is store or outside?
 			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 			//Pics (no index)
 			//Contams

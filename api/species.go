@@ -17,7 +17,7 @@ import (
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
-	ScientificName    string          `bson:"scientificName" json:"scientificName"`
+	ScientificName    string `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate" json:"standardSubstrate"`
 	Subspecies        []string              `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
@@ -25,7 +25,10 @@ type Species struct {
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
 	DefaultAcl        ACL `bson:"defaultAcl" json:"defaultAcl"` // Only used when importing main entry types or creating a subspecies
+}
 
+func (spec *Species) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult()
 }
 
 //func (s Species) Blank() CollectionItem {

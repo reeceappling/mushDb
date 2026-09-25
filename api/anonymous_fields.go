@@ -124,18 +124,25 @@ type MainCollectionOptionalParentField struct {
 	Parent *MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
 
-func (optParent MainCollectionOptionalParentField) GetParent(ctx context.Context) (MainCollectionItem, error) {
+func (optParent MainCollectionOptionalParentField) GetParent(ctx context.Context) (ParentResult, error) {
+	out := ParentResult{}
 	if optParent.Parent == nil {
-		return nil, nil
+		return out, nil
 	}
-	return GetMainCollectionItemWithId(ctx, *optParent.Parent)
+	mcitem, err := GetMainCollectionItemWithId(ctx, *optParent.Parent)
+	if err != nil {
+		return out, err
+	}
+	out.EntryType = mcitem.EntryType()
+	out.Data = mcitem
+	return out, nil
 }
 
 type MainCollectionParentField struct {
 	Parent MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
 
-func (parent MainCollectionParentField) GetParent(ctx context.Context) (MainCollectionItem, error) {
+func (parent MainCollectionParentField) GetParent(ctx context.Context) (ParentResult, error) {
 	return GetMainCollectionItemWithId(ctx, parent.Parent)
 }
 

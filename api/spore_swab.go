@@ -33,7 +33,15 @@ type SporeSwab struct {
 	AclField                          `bson:"inline"`
 }
 
-func (sw SporeSwab) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+//func (sw *SporeSwab) GetParent(ctx context.Context) (ParentResult, error) { // Covered by GetParent on parentField
+//	out, err := sw.MainCollectionOptionalParentField.GetParent(ctx)
+//	if err != nil {
+//		return out, err
+//	}
+//	return out, nil
+//}
+
+func (sw SporeSwab) Children(ctx context.Context) (children ChildrenResult, err error) {
 	return sw.getTransfersChildren(ctx)
 }
 

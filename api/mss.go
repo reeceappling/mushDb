@@ -40,18 +40,21 @@ type MSS struct {
 	AclField                          `bson:"inline"`
 }
 
+func (M *MSS) GetParent(ctx context.Context) (ParentResult, error) {
+	out, err := M.MainCollectionOptionalParentField.GetParent(ctx)
+	if err != nil {
+		return out, err
+	}
+	out.WaterJar = M.WaterSource
+	return out, nil
+}
+
 func (M MSS) Innoculatable() error {
 	return errors.New("mss never innoculatable") // TODO: ensure ok
 }
 
-func (M MSS) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := M.getTransfersChildren(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out = append(out, xfersOutChildren...)
-	return out, nil
+func (M MSS) Children(ctx context.Context) (children ChildrenResult, err error) {
+	return M.getTransfersChildren(ctx)
 }
 
 func (M MSS) CanTransferTo(dst geneticSource) error {

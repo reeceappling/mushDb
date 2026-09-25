@@ -26,10 +26,10 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	GenSporeField                     `bson:"inline"`
-	TransfersOutField                 `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField                 `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                            []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentTypeField                   `bson:"inline"`    // EntryType, store, online, or outside? TODO: or should this be actual parent type? // parent can be "store, outside, or a mainCollectionEntryType (box/bag)" TODO: ensure correct
-	MainCollectionOptionalParentField `bson:"inline"`    // NONEXISTENT MEANS FROM STORE or outside
+	ParentTypeField                   `bson:"inline"` // EntryType, store, online, or outside? TODO: or should this be actual parent type? // parent can be "store, outside, or a mainCollectionEntryType (box/bag)" TODO: ensure correct
+	MainCollectionOptionalParentField `bson:"inline"` // NONEXISTENT MEANS FROM STORE or outside
 	PicsField                         `bson:"inline"`
 	DisposedField                     `bson:"inline"`
 	MostRecentImageField              `bson:"inline"`
@@ -38,16 +38,46 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	AclField                          `bson:"inline"`
 }
 
-func (f Fruit) Children(ctx context.Context) (out []MainCollectionItem, err error) {
-	out = []MainCollectionItem{}
-	xfersOutChildren, err := f.getTransfersChildren(ctx)
+//func (f *Fruit) GetParent(ctx context.Context) (ParentResult, error) { // Covered by GetParent on MainCollectionOptionalParentField
+//	out, err := b.MainCollectionOptionalParentField.GetParent(ctx)
+//	if err != nil {
+//		return out, err
+//	}
+//	out.SubstrateRecipe = &b.Substrate
+//	out.SubstrateBatch = b.SubstrateBatch
+//	out.PCRun = &b.PcRun
+//	return out, nil
+//}
+
+func (f Fruit) Children(ctx context.Context) (children ChildrenResult, err error) {
+	children, err = f.getTransfersChildren(ctx)
 	if err != nil {
-		return nil, err
+		return children, err
 	}
-	out = append(out, xfersOutChildren...)
-	// TODO: get sporePrints
-	// TODO: get sporeSwabs
-	return out, nil
+	// get sporePrints
+	curs, err := DbFrom(ctx).Collection(SporePrintCollectionName).Find(ctx, bson.M{IDfld: bson.M{"$in": f.Prints}}) // TODO: ensure $in works well
+	if err != nil {
+		return children, err
+	}
+	for item, err := range cursorIterator[*SporePrint](ctx, curs) {
+		if err != nil {
+			return children, err
+		}
+		children.SporePrints = append(children.SporePrints, item)
+	}
+
+	// get sporeSwabs
+	cursSwab, err := DbFrom(ctx).Collection(SporeSwabCollectionName).Find(ctx, bson.D{{"parent", f.Id}}) // TODO: ensure parent indexed? LcSyringe, sporeSwab, Plates, slants, mss. Any more? Not as of 9/25/26
+	if err != nil {
+		return children, err
+	}
+	for item, err := range cursorIterator[*SporeSwab](ctx, cursSwab) {
+		if err != nil {
+			return children, err
+		}
+		children.SporeSwabs = append(children.SporeSwabs, item)
+	}
+	return children, nil
 }
 
 func (f Fruit) CanTransferTo(dst geneticSource) error {

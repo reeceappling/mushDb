@@ -35,6 +35,10 @@ type Subspecies struct {
 	DefaultAcl       ACL `bson:"defaultAcl" json:"defaultAcl"` // Only used when importing mainCollectionItems
 }
 
+func (subspec *Subspecies) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult() // TODO: or return species?
+}
+
 //func (s Subspecies) Blank() CollectionItem {
 //	return &Subspecies{}
 //}

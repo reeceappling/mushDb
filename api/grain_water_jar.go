@@ -25,6 +25,13 @@ type GrainWaterJar struct {
 	AclField              `bson:"inline"`
 }
 
+func (wj *GrainWaterJar) GetParent(ctx context.Context) (ParentResult, error) {
+	// TODO: probably not ok because it is not a mainCollId
+	return ParentResult{
+		GrainBatch: &wj.GrainBatch,
+	}, nil
+}
+
 func (f GrainWaterJar) DbId() MainCollectionId {
 	return f.Id
 }
@@ -53,12 +60,10 @@ func (wj *GrainWaterJar) EntryType() string {
 	return "grainWaterJar" // TODO: const
 }
 
-func (wj *GrainWaterJar) Children(ctx context.Context) ([]MainCollectionItem, error) {
+func (wj *GrainWaterJar) Children(ctx context.Context) (children ChildrenResult, err error) {
+	// TODO: figure out how to get the children for this!
+	// TODO: need to search through agar batches, as well as Liquid cultures
 	panic("not implemented")
-}
-
-func (wj *GrainWaterJar) GetParent(ctx context.Context) (MainCollectionItem, error) {
-	return MainCollectionItem(nil), errors.New("GWJs do not support GetParent") // TODO: ok?
 }
 
 func (gwj *GrainWaterJar) SourceType() string {
