@@ -4,15 +4,9 @@ import {Data, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
+import {useEffect, useState} from "react";
 
 export type Antibiotic = "Doxycycline" | "Cefazolin" | "Amoxicillin";
-export const AntibioticsList: Antibiotic[] = ["Doxycycline", "Cefazolin", "Amoxicillin"]
-
-export function IsValidAntibiotic(input: any): boolean {
-    return (
-        typeof input === 'string' && AntibioticsList.includes(input as Antibiotic) // TODO: fixme
-    )
-}
 
 export function AntibioticSelector( // TODO: can only disable/enable, delete will happen on update
     {initial, onSelect, blacklist}: {
@@ -59,23 +53,31 @@ export function AntibioticsDisplay( // TODO: can only disable/enable, delete wil
 }
 
 export function AntibioticEntriesGroupForNew(
-    {currentEntries, updateParent,}: {
-        currentEntries: Antibiotic[],
+    {initial, updateParent,}: {
+        initial: Antibiotic[],
         updateParent: (l: Antibiotic[]) => void
     }) {
+    const [current, setCurrent] = useState<Antibiotic[]>(initial);
+    useEffect(()=>{
+        setCurrent(initial)
+    },[initial])
     const addEntryByName = (item?: Antibiotic) => {
-        item && updateParent([...(currentEntries || []), item])
+        item && doUpdate([...(current || []), item])
+    }
+    const doUpdate = (upd:Antibiotic[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
     return <div>{/* TODO: CLASS STYLINGS!!!! */}
-        {currentEntries.map((input, index) => {
+        {current.map((input, index) => {
             return <div key={index} className={"inlineChildren mb-1"}> {/* TODO: CLASS STYLINGS!!!! */}
                 <div>{input}</div>
                 <button className={"removeButton ml-2"} onClick={()=>{
-                    updateParent([...(currentEntries || [])].filter((existing) => existing !== input))
+                    doUpdate([...(current || [])].filter((existing) => existing !== input))
                 }}>{"Remove"}</button>
             </div>
         })}
-        <AntibioticSelector onSelect={addEntryByName} blacklist={currentEntries.map((v) => {
+        <AntibioticSelector onSelect={addEntryByName} blacklist={current.map((v) => {
             return v
         })}/>
     </div>
@@ -93,8 +95,8 @@ export function AntibioticEntriesGroup({
         updateParent([...(initialEntries || [])].filter((c, i) => c.data !== toRemove))
     }
     const disableField = (name: string) => { // TODO: unsure if this works properly
-        let data = [...(initialEntries || [])].map((v, i) => {
-            let val = v
+        const data = [...(initialEntries || [])].map((v, i) => {
+            const val = v
             if (val.data === name) {
                 val.disabled = !val.disabled
             }

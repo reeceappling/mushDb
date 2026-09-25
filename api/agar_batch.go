@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -11,18 +13,32 @@ import (
 )
 
 // Required for
-// TODO: CreatePlates
-// TODO: CreateSlants (still required if the slants are directly PC'd
+// CreatePlates
+// CreateSlants (only if the slants are directly PC'd, which they should generally be)
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
-	// CreationDate is assumed to be the same as on PcRun
+	// CreationDate is assumed to be the same as on PcRun // Also exists in the ID
 	PcRunField       `bson:"inline"`
 	AgarRecipeField  `bson:"inline"`
 	Color            Colorant `bson:"color" json:"color"`
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
+	// TODO: also add list of grainwater jars used if any????
+	GrainWaterJarsField `bson:"inline"`
+}
+
+func (ab *AgarBatch) GetParent(ctx context.Context) (ParentResult, error) {
+	return ParentResult{
+		PcRun:               &ab.PcRun,
+		AgarRecipe:          &ab.AgarRecipe,
+		GrainWaterJarsField: ab.GrainWaterJarsField,
+	}, nil
+}
+
+func (ab *AgarBatch) recipeId() AlternateCollectionId {
+	return ab.AgarRecipe
 }
 
 type AgarBatchField struct {
@@ -33,22 +49,15 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 	if field.AgarBatch == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
-		"_id": *field.AgarBatch,
+	err = DbFrom(ctx).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
+		IDfld: *field.AgarBatch,
 	}).Decode(&out)
 	return out, err
 }
 
-//type NewAgarBatchRequest struct {
-//	PcRunField
-//	AgarRecipeField
-//	Color *string
-//	NotesCreationField
-//}
-
 type updateAgarBatchRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
@@ -59,25 +68,12 @@ func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bs
 		Finalized()
 }
 
-// TODO: MOVE
-func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
-	defer r.Body.Close()
-	bytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		println("failed to read body: " + err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	if err = json.Unmarshal(bytes, &req); err != nil {
-		println("bad body format: " + string(bytes))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	return nil
-}
 func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	req := updateAgarBatchRequest{}
 
 	bytes, err := io.ReadAll(r.Body)
@@ -87,11 +83,6 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = json.Unmarshal(bytes, &req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
@@ -110,11 +101,12 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 
 func initializeAgarBatches(ctx context.Context) error {
 	// Indices
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(AgarBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
-		newSimpleIndex("recipe", "recipe", false, false, false),
+		newSimpleIndex("agarRecipe", "agarRecipe", false, false, false),        // Required for deleting agar batches
+		newSimpleIndex("grainWaterJars", "grainWaterJars", false, true, false), // TODO: ensure works!
 		//newSimpleIndex("color", "color", false, false, false),
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -122,21 +114,20 @@ func initializeAgarBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-
-	testAltId := altCollIdForint(0)
-	testItem := AgarBatch{
-		AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
-		PcRunField:                 PcRunField{testAltId},
-		AgarRecipeField:            AgarRecipeField{testAltId},
-		Color:                      clearColor,
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
-	}
-	err = addTestAltEntries(ctx, testItem)
-	println("test Agar Batch:", testAltId.AsBase58())
-	return err
+	// If test agar batch does not exist, and is dev, then create it
+	return env.IfNotProd(ctx, func() error {
+		testItem := AgarBatch{
+			AlternateCollectionIdField: defaultAltIdField,
+			PcRunField:                 PcRunField{exAltId},
+			AgarRecipeField:            AgarRecipeField{exAltId},
+			Color:                      clearColor,
+			NotesField:                 defaultEntryNotes(),
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanReadAcl(nil),
+		}
+		println("default Agar Batch:", exAltId.AsBase58())
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createAgarBatchRequest struct {
@@ -144,9 +135,10 @@ type createAgarBatchRequest struct {
 	PcRunField
 	AgarRecipeField
 	NotesField
+	GrainWaterJarsDisposableField
 }
 
-func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
+func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: validate working! made lots of changes!
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -163,20 +155,27 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid agar color!", http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(AgarBatchCollectionName)
+	ctx := r.Context()
 	// Validate fields
 	_, err = req.PcRunField.Get(ctx)
-
 	if err != nil {
-		dbErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = req.AgarRecipeField.Get(ctx)
+	recipe, err := req.AgarRecipeField.Get(ctx)
 	if err != nil {
-		dbErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	requestHasGrainWater := req.GrainWaterJars != nil && len(req.GrainWaterJars) > 0
+	if recipe.LiquidsField.ContainsGrainWater() != requestHasGrainWater {
+		dbErr(w, "Recipes with grainwater must be utilized with grainwater, and vise versa", http.StatusBadRequest)
+		return
+	}
+	if err = req.GrainWaterJarsField.EnsureExist(ctx, w); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	ctx, now := request.UnixTime(ctx)
 	// create new batch
 	toInsert := &AgarBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -184,8 +183,63 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		AgarRecipeField:            req.AgarRecipeField,
 		Color:                      req.Color,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(),
+		GrainWaterJarsField:        req.GrainWaterJarsField,
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	if status, err := newTxnReturnsStatus(ctx, func(sessCtx mongo.SessionContext) (int, error) { // TODO: for any other creates that use transactions, do it this way!
+		status, er := req.GrainWaterJarsDisposableField.Dispose(sessCtx)
+		if er != nil {
+			return status, errors.Join(errors.New("failed to create update for multi-grainWaterJar disposal"), er)
+		}
+		return finishCreateAlternateEntryNoWrite(sessCtx, toInsert)
+	}); err != nil {
+		println("txn error in createAgarBatch: " + err.Error()) // TODO: del?
+		http.Error(w, err.Error(), status)
+	} else {
+		writeEntryAsResponseOrFailSilently(w, toInsert)
+	}
 }
+
+//func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// TODO: ensure batches not used anywhere else first
+//
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	for _, collName := range []string{PlatesCollectionName, SlantsCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"agarBatch": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for agarBatch usage in collection "+collName+". "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one item in collection "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//	// Delete if not found elsewhere!
+//	deleteResult, err := db.Collection(AgarBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+//	if err != nil {
+//		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if deleteResult.DeletedCount == 0 {
+//		http.Error(w, "failed to delete id "+idStr+" from agarBatch collection. Id not found", http.StatusNotFound)
+//		return
+//	}
+//	_, err = w.Write([]byte(idStr))
+//	handleWriteErr(err, w)
+//}

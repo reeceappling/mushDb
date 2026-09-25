@@ -1,0 +1,64 @@
+---
+name: Run tests
+on:
+  pull_request:
+
+jobs:
+  run-go-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true               # Speeds up runs by caching Go modules and build data
+      - name: Download Dependencies
+        run: go mod download
+      - name: Run Tests
+        run: go test ./...
+  run-ts-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'web/package.json'
+          cache: 'npm'
+      - name: Install ts dependencies
+        run: npm ci # TODO: ensure ok
+          #      - name: Run TypeScript Build / Tests # TODO; FIX!
+        #        run: npx tsc --noEmit
+  run-combo-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 1
+          token: ${{ github.token }}
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true               # Speeds up runs by caching Go modules and build data
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'web/package.json'
+          cache: 'npm'
+      - name: Download Dependencies
+        run: |
+          go mod download
+          npm ci # TODO: ensure ok
+      # TODO: run cross-server tests?
+      # TODO: what else here?
