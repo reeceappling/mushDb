@@ -34,6 +34,8 @@ type SporePrint struct {
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	// TODO: ADD TransfersOutField `bson:"inline"` // Only for print->plate/slant/stasisTube? Maybe could go to box or bag? // TODO: also figure this out on the typescript side!
+	// TODO: transfer to plate/slant creates intermediary swab or mss?
+	// TODO: transfer to stasis tube does not create an
 
 	// TODO: MSSs can come from prints. Maybe we allow searching by this spore print?
 	PicsField            `bson:"inline"`
@@ -56,7 +58,7 @@ type SporePrint struct {
 func (sp SporePrint) Children(ctx context.Context) (children ChildrenResult, err error) {
 	children = ChildrenResult{}
 	db := DbFrom(ctx)
-	// Get all plates
+	// Get all plates // TODO: maybe get rid of if I decide that there should be intermediary swabs or syringes...
 	curs, err := db.Collection(PlatesCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
 	if err != nil {
 		return children, err
@@ -65,7 +67,7 @@ func (sp SporePrint) Children(ctx context.Context) (children ChildrenResult, err
 	if err != nil {
 		return children, err
 	}
-	// Get all slants
+	// Get all slants // TODO: maybe get rid of if I decide that there should be intermediary swabs or syringes...
 	cursSlant, err := db.Collection(SlantsCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
 	if err != nil {
 		return children, err
@@ -74,7 +76,7 @@ func (sp SporePrint) Children(ctx context.Context) (children ChildrenResult, err
 	if err != nil {
 		return children, err
 	}
-	// Get all spore swabs // TODO: get this from transfers once implemented!
+	// Get all spore swabs
 	cursSwab, err := db.Collection(SporeSwabCollectionName).Find(ctx, bson.D{{"parent", sp.Id}}) // TODO: ensure parent indexed?
 	if err != nil {
 		return children, err

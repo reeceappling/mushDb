@@ -114,7 +114,7 @@ func (l LiquidCulture) Children(ctx context.Context) (children ChildrenResult, e
 	fruits, err := fruitsWithParent(ctx, l.Id)
 	if err != nil {
 		return children, err
-	} // TODO: if swap to MainCollId, then maybe map instead?
+	} // TODO: if swap to MainCollId, then maybe map instead? Not sure what I was trying to say here....
 	children.Fruits = append(children.Fruits, fruits...)
 	// Get LC Syringes
 	curs, err := DbFrom(ctx).Collection(LcSyringeCollectionName).Find(ctx, bson.D{{"parent", l.Id}}) // TODO: ensure parent indexed?
@@ -210,6 +210,7 @@ func initializeLCs(ctx context.Context) error {
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//transfersOutIndexModel,
+		// TODO: consider making a parent-child SQL table to make this faster.... Probably only done much much later
 		//newSimpleIndex("parent", "parent", false, true, false), // TODO: INDEX IF USED!         // TODO: nil is store or outside? FINALIZE
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside? FINALIZE
 		//Pics (no index)

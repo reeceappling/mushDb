@@ -33,6 +33,7 @@ export interface SporePrintData {
     color?: string
     density?: string
     pics?: PicWithNotesIncoming[]
+    transfersOut?: string[]
     sale?: string
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]

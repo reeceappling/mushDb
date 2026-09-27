@@ -13,7 +13,7 @@ import {
     FlexedArea,
     FlexedSinglesGroup,
     ImportDisplayInput,
-    ImportEntryFormWrapper,
+    ImportEntryFormWrapper, IsString,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -68,6 +68,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -121,6 +122,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['pics', IsValidPicWithNotesIncoming],
+        ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {
@@ -149,6 +151,7 @@ export default function SporePrintDisplay(
     const [density, setDensity] = useState<string | undefined>()
     const [pics, setPics] = useState(InitialPicsEntries(data.pics))
     const [sale, setSale] = useState(data.sale)
+    const [transfersOut, setTransfersOut] = useState(initial.transfersOut)
     const [disposed, setDisposed] = useState(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes, new: []})
     const [err, setErr] = useState<string | undefined>()
@@ -162,6 +165,7 @@ export default function SporePrintDisplay(
         setDisposed(updated.disposed)
         setNotes(InitialNotesState(updated.notes))
         setAcl(updated.acl)
+        setTransfersOut(updated.transfersOut)
         setErr(undefined)
     }
     const cookies = useContext(CookiesContext)
@@ -300,6 +304,10 @@ export default function SporePrintDisplay(
         </FlexedArea>
         <ChildMssArea parent={initial._id}/>{/* TODO: area where we can display all the child MSS of this print? */}
         <ChildSwabArea parent={initial._id}/>{/* TODO: area where we can display all the child swabs of this print? */}
+        {/*<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"sporeSwab"}*/}
+        {/*                     transfersOut={transfersOut}*/}
+        {/*                     allowNewTransferCreation={!readonly}*/}
+        {/*    validTypesTo={["plate", "slant"TODO: any others?]} TODO: on go side/>*/}
         <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}
                      headerLevel={headerLevel}/>{/* Pics */}
         <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
