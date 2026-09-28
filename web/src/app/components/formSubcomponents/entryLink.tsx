@@ -13,6 +13,7 @@ export default function EntryLinkForId(
             linkId: string,
             displayId?: string,
             openInNewTab?: boolean;
+            // TODO: itemProp?
         };
     }) {
     return <EntryLinkIdWrapper props={props}>
@@ -31,7 +32,7 @@ export function EntryLinkWrapper<T extends Entry>(
         };
         children: ReactNode;
     }) {
-    return <EntryLinkInternal props={{
+    return <EntryLinkInternal props={{ // TODO: itemType, itemScope, itemAttribute, itemID?
         entryType: props.entry.entryType(),
         linkId: EntryUrlId(props.entry),
         openInNewTab: props.openInNewTab,
@@ -48,6 +49,7 @@ export function EntryLinkIdWrapper(
             linkId: string;
             entryType: string;
             openInNewTab?: boolean;
+            itemProp?: string; // TODO: USE THIS WHERE NEEDED
         };
         children: ReactNode;
     }) {
@@ -55,13 +57,14 @@ export function EntryLinkIdWrapper(
         e.stopPropagation();
     }
     const actualLink = viewUrlFor(props.entryType, props.linkId)
+    const itemTypeSchemaUrl = ""/* TODO: URL HERE!*/
     if (props.openInNewTab===true){
         // TODO: prefetching? return <Link to={"/view/${props.entryType}/${props.linkId}"} target={"_blank"} rel={"noopener noreferrer"}>{children}</Link>
-        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
+        return <a itemScope={true} itemProp={props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
             {children}
         </a>
     }
-    return <a href={actualLink} onClick={onClickStopPropagation}>
+    return <a itemScope={true} itemProp={props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} onClick={onClickStopPropagation}>
         {children}
     </a>
 }
@@ -79,7 +82,7 @@ export function EntryLinkInternal(
         children: ReactNode;
     }) {
     const actualLink = viewUrlFor(props.entryType, props.linkId)
-    if (props.openInNewTab===true){
+    if (props.openInNewTab===true){ // TODO: itemType, itemScope, itemAttribute, itemID?
         return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={e=>e.stopPropagation()}>
             {children}
         </a>

@@ -209,6 +209,7 @@
       - [ ] H1-H5 usage for subsections
       - [ ] Not every element should be a <div>. Make use of every section element available – like <section>, <nav>, <article>, <aside> or <footer>
       - [ ] Implement a table of contents on every blog post or article. This will help you to get [featured snippets](https://seo-cheat-sheet.9elements.com/#featured+snippets) as well.
+    - [ ]  Microdata: itemProp, itemType (schema), itemScope, itemid, itemref: https://schema.org/docs/gs.html
     - [ ] STRUCTURED DATA
       - EXAMPLE: <script type="application/ld+json">
     {

@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     clientPostRequestHeaders,
@@ -161,7 +161,7 @@ export default function GrainWaterJarDisplay( // TODO; this whole thing!
         ]
         return <DisplayFormWrapper entryType={"grainWaterJar"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Grain Water Jar", entryType:"grainWaterJar", linkPage:false, allowOpenMainPage:false}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Grain Water Jar", entryType:"grainWaterJar", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

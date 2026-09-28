@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
 import {
@@ -186,9 +186,9 @@ export default function LcRecipeDisplay(
     return (
         <DisplayFormWrapper entryType={"lcRecipe"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "Liquid Culture Recipe", entryType: "lcRecipe"}}>
+            <ViewPageEntryID props={{id: data._id, txt: "Liquid Culture Recipe", entryType: "lcRecipe"}}>
                 <NameModifiable initial={initial.name} readonly={readonly} updateParent={setRecName}/>
-            </ID>
+            </ViewPageEntryID>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

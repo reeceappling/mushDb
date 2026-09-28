@@ -62,7 +62,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     AddCreatedQuadColFunction,
@@ -336,7 +336,7 @@ export default function LcDisplay(
         return initial.species !== undefined
     }
     return <DisplayFormWrapper entryType={"lc"}>
-        <ID props={{id: data._id, txt: "Liquid Culture", entryType: "lc", linkPage: false, allowOpenMainPage: false}}/>
+        <ViewPageEntryID props={{id: data._id, txt: "Liquid Culture", entryType: "lc", linkPage: false, allowOpenMainPage: false}}/>
         {readonly ||
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>}
         <MostRecentImageDisplay data={initial.mostRecentImage}/>

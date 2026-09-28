@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -160,9 +160,9 @@ export default function SubstrateRecipeDisplay(
     return (
         <DisplayFormWrapper entryType={"substrateRecipe"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "Substrate Recipe", entryType: "substrateRecipe"}}>
+            <ViewPageEntryID props={{id: data._id, txt: "Substrate Recipe", entryType: "substrateRecipe"}}>
                 <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
-            </ID>
+            </ViewPageEntryID>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

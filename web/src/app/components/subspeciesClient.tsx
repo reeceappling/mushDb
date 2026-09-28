@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
@@ -128,8 +128,8 @@ export default function SubspeciesDisplay(
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
-                <ID props={{id:data.species, txt:"Species", entryType:"species"}}/> {/* TODO: link not working!*/}
+                <ViewPageEntryID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
+                <ViewPageEntryID props={{id:data.species, txt:"Species", entryType:"species"}}/> {/* TODO: link not working!*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>

@@ -1,7 +1,7 @@
 'use client'
 
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
@@ -248,7 +248,7 @@ export default function PcRunDisplay(
     return (
         <DisplayFormWrapper entryType={"pcRun"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "PC Run", entryType: "pcRun"}}/>
+            <ViewPageEntryID props={{id: data._id, txt: "PC Run", entryType: "pcRun"}}/>
             <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

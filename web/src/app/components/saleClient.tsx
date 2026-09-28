@@ -7,7 +7,7 @@ import {
     Note, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     DisplayFormWrapper,
@@ -126,7 +126,7 @@ export default function SaleDisplay(
         return (
             <DisplayFormWrapper entryType={"sale"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Sale", entryType:"sale"}}/>
+                <ViewPageEntryID props={{id:data._id, txt:"Sale", entryType:"sale"}}/>
 
                 <FlexedArea>
                     <FlexedSinglesGroup>

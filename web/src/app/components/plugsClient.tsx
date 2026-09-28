@@ -46,7 +46,7 @@ import {
     ParentDisplay,
     PicsDisplay
 } from "./formSubcomponents/commonClient";
-import ID from "./formSubcomponents/id";
+import ViewPageEntryID from "./formSubcomponents/id";
 import {PcRunArea} from "./pcRunClient";
 import {InnocDisplay, TransfersOutDisplay} from "./transferClient";
 import {SpeciesData} from "./speciesServer";
@@ -335,7 +335,7 @@ export default function PlugsDisplay(
     return (
         <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err}/>
-            <ID props={{
+            <ViewPageEntryID props={{
                 id: data._id,
                 txt: "Plugs Jar",
                 entryType: "plugs",
@@ -537,7 +537,7 @@ export function NewPlugsForm(
 
             <div>{"PC Run: "}</div>
             <div>
-                {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+                {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true, itemProp: "pcRun"}}>
                         {pcRunIn._id}
                     </EntryLinkIdWrapper>
                     : <PcRunSelectorCloseable doSelect={setPcRun} txt={"PC Run: "} creatorInPage={handlers.isTopLevel}

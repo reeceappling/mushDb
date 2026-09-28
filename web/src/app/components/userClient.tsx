@@ -1,7 +1,7 @@
 'use client'
 
 import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {
     CheckArrayType, clientPostRequestHeaders,
     DisplayFormWrapper,
@@ -92,7 +92,7 @@ export default function UserDisplay(
 
             <DisplayFormWrapper entryType={"user"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"User", entryType:"user"}}/>
+                <ViewPageEntryID props={{id:data._id, txt:"User", entryType:"user"}}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
                     </FlexedSinglesGroup>

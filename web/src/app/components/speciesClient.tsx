@@ -6,7 +6,7 @@ import {
     Note,
     NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {
@@ -192,7 +192,7 @@ export default function SpeciesDisplay(
     return (
         <DisplayFormWrapper entryType={"species"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "Species", entryType: "species"}}/>
+            <ViewPageEntryID props={{id: data._id, txt: "Species", entryType: "species"}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <div>{"Scientific Name: " + initial.scientificName}</div>

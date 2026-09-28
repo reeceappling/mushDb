@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {
@@ -258,7 +258,7 @@ export default function FruitingChamberDisplay(
     return (
         <DisplayFormWrapper entryType={"fruitingChamber"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Fruiting Chamber", entryType:"fruitingChamber"}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Fruiting Chamber", entryType:"fruitingChamber"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}/>{/* Most recent image! */}
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>

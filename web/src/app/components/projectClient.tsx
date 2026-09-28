@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
     clientPostRequestHeaders,
@@ -191,7 +191,7 @@ export default function ProjectDisplay(
         <DisplayFormWrapper entryType={"project"}>
             <ErrorDisplay err={err}/>
             {/* data._id on next line because project name can have spaces?*/}
-            <ID props={{id: data._id, txt: "Project", entryType: "project"}}/>
+            <ViewPageEntryID props={{id: data._id, txt: "Project", entryType: "project"}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>

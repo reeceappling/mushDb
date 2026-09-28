@@ -8,7 +8,7 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {
     InitialPicsEntries,
     IsValidPicWithNotesIncoming,
@@ -354,7 +354,7 @@ export default function FruitDisplay(
     return (
         <DisplayFormWrapper entryType={"fruit"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "Fruit", entryType: "fruit", linkPage: false, allowOpenMainPage: false}}/>
+            <ViewPageEntryID props={{id: data._id, txt: "Fruit", entryType: "fruit", linkPage: false, allowOpenMainPage: false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>
@@ -400,6 +400,7 @@ function FruitPrintsDisplay({prints}: { prints?: string[] }) {
                 linkId: id,
                 entryType: "sporePrint",
                 openInNewTab: false,
+                itemProp: "print"
             }}>
                 <div className={"fruitPrint p-1"}>{id}</div>
             </EntryLinkIdWrapper>)}

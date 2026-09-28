@@ -45,7 +45,7 @@ import {
 } from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {MssData} from "@/app/components/mssServer";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {SaleArea} from "@/app/components/saleClient";
@@ -287,7 +287,7 @@ export default function MssDisplay(
 
         return <DisplayFormWrapper entryType={"mss"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Multispore Syringe", entryType:"mss"}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Multispore Syringe", entryType:"mss"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>

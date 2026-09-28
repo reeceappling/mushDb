@@ -4,7 +4,7 @@ import React, {JSX, useContext, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -187,7 +187,7 @@ export default function AgarBatchDisplay(
     ]
     return (
         <DisplayFormWrapper entryType={"agarBatch"}>
-            <ID props={{id:data._id, txt:"Agar Batch", entryType:"agarBatch", linkPage:false, allowOpenMainPage:false}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Agar Batch", entryType:"agarBatch", linkPage:false, allowOpenMainPage:false}}/>
             <ErrorDisplay data-cy-id={"Error"} err={err}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>

@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
-import ID, {IdPageLink} from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID, {IdPageLink} from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {TransferData} from "@/app/components/transferServer";
 import {
@@ -134,7 +134,7 @@ export default function TransferDisplay(
         const fromToLink = (preText: string, itemType: string, itemId: string,) => {
             const b58id = itemId
             return <div className={"fromToLink"}>
-                <EntryLinkIdWrapper props={{linkId: b58id, entryType: itemType, openInNewTab: false}}>
+                <EntryLinkIdWrapper props={{linkId: b58id, entryType: itemType, openInNewTab: false, itemProp: preText}}>
                     <div className={"xferEntryLink"}>{preText + ": " + itemType + " " + b58id}</div>
                 </EntryLinkIdWrapper>
             </div>
@@ -179,7 +179,7 @@ export default function TransferDisplay(
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:initial._id, txt:"Transfer", entryType:"transfer", linkPage:false, allowOpenMainPage:false}}/>
+            <ViewPageEntryID props={{id:initial._id, txt:"Transfer", entryType:"transfer", linkPage:false, allowOpenMainPage:false}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
@@ -524,6 +524,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
+                                itemProp: "transfer"
                             }}>{xfer}</EntryLinkIdWrapper></div>
                         })}
                         {newXfers.map((xfer, i) => {
@@ -531,6 +532,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
+                                itemProp: "transfer"
                             }}>{xfer}</EntryLinkIdWrapper></div>
                         })}
                     </div>}
@@ -569,6 +571,7 @@ export function TransfersOutViewOnlyDisplay(
                     linkId: xfer,
                     entryType: "transfer",
                     openInNewTab: false,
+                    itemProp: "transfer"
                 }}>{xfer}</EntryLinkIdWrapper></div>
             })}
         </div>
@@ -582,10 +585,10 @@ export function InnocDisplay(
     }
 ) {
     const out: JSX.Element | null = (innoc === undefined) ? null :
-        <IdPageLink id={innoc} entryType={"transfer"} openInNewTab={true}/>
+        <IdPageLink id={innoc} entryType={"transfer"} openInNewTab={true} itemProp={"innoculation"} itemScope={true} itemType={"https://schema.org" /*TODO: innoc schema*/}/>
     return <div className={"innocDisplay"}>
         <div>{"Innoculation ID: "}</div>
-        <div>{out || "none"}</div>
+        <div >{out || "none"}</div>
     </div>
 }
 
@@ -618,12 +621,12 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }, true),
         NewColumn("Src", (v)=>{
-            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true/*TODO: itemAttribute?*/}}>
                 <div>{v.from}</div>
             </EntryLinkIdWrapper>
         }, true),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true/*TODO: itemAttribute?*/}}>
                 <div>{v.to}</div>
             </EntryLinkIdWrapper>
         }, true),
@@ -634,7 +637,7 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: TransferData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true/*TODO: itemAttribute?*/}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -649,12 +652,12 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Src", (v)=>{
-            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true/*TODO: itemAttribute?*/}}>
                 <div>{v.from}</div>
             </EntryLinkIdWrapper>
         }),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true/*TODO: itemAttribute?*/}}>
                 <div>{v.to}</div>
             </EntryLinkIdWrapper>
         }),

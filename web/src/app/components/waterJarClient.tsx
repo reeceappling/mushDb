@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
@@ -169,7 +169,7 @@ export default function WaterJarDisplay(
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err}/>
-            <ID props={{
+            <ViewPageEntryID props={{
                 id: initial._id,
                 txt: "Water Jar",
                 entryType: "waterJar",

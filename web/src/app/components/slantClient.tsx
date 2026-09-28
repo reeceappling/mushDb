@@ -7,7 +7,7 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     SlantData
@@ -306,7 +306,7 @@ export default function SlantDisplay(
     return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
+                <ViewPageEntryID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>

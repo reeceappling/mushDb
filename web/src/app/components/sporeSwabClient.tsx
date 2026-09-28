@@ -46,7 +46,7 @@ import {
     UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -251,7 +251,7 @@ export default function SporeSwabDisplay(
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>

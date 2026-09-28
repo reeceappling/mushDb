@@ -41,7 +41,7 @@ import {
     NewPicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
@@ -271,7 +271,7 @@ export default function SporePrintDisplay(
 
     return <DisplayFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err}/>
-        <ID props={{id: data._id, txt: "Spore Print", entryType: "sporePrint"}}/>
+        <ViewPageEntryID props={{id: data._id, txt: "Spore Print", entryType: "sporePrint"}}/>
         <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
         <MostRecentImageDisplay data={initial.mostRecentImage}/>
         <FlexedArea>

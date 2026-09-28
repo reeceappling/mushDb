@@ -31,7 +31,7 @@ import {
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useContext, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {
     ErrorDisplay,
     GensFormDisplay,
@@ -429,7 +429,7 @@ export default function JarDisplay(
 
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>

@@ -8,7 +8,7 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {PlateData} from "@/app/components/plateServer";
 import {
@@ -321,7 +321,7 @@ export default function PlateDisplay(
     return (
         <DisplayFormWrapper entryType={"plate"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id: data._id, txt: "Plate", entryType: "plate", linkPage: false}}/>
+            <ViewPageEntryID props={{id: data._id, txt: "Plate", entryType: "plate", linkPage: false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <FlexedArea>

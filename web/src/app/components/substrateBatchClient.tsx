@@ -3,7 +3,7 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -161,7 +161,7 @@ export default function SubstrateBatchDisplay(
         return (
             <DisplayFormWrapper entryType={"substrateBatch"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Substrate Batch", entryType:"substrateBatch"}}/>
+                <ViewPageEntryID props={{id:data._id, txt:"Substrate Batch", entryType:"substrateBatch"}}/>
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>

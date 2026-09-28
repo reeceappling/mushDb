@@ -8,7 +8,7 @@ import {
     Data,
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     IsValidNutrient,
@@ -204,13 +204,13 @@ export default function JarRecipeDisplay(
     ]
     return <DisplayFormWrapper entryType={"jarRecipe"}>
         <ErrorDisplay err={err}/>
-        <ID props={{
+        <ViewPageEntryID props={{
             id: data._id,
             txt: "Grain Jar Recipe",
             entryType: "jarRecipe"
         }}>{/* TODO: modify top areas to dynamically size?*/}
             <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
-        </ID>
+        </ViewPageEntryID>
         <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
         <FlexedArea>
             <FlexedSinglesGroup>

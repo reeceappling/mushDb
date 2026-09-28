@@ -1,12 +1,8 @@
 'use client'
 
-import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/headers";
 import * as React from "react";
-import {JSX, ReactNode, SetStateAction, SyntheticEvent, useContext, useEffect, useState} from "react";
-import {
-    ContaminationForm,
-    NewContaminationForm
-} from "@/app/components/formSubcomponents/contaminations";
+import {JSX, SyntheticEvent, useContext, useEffect, useState} from "react";
+import {ContaminationForm, NewContaminationForm} from "@/app/components/formSubcomponents/contaminations";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {Data, ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
@@ -15,41 +11,36 @@ import ReaderWriterSelector, {
     ReadTagFunc,
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {
-    AssertSubstrateRecipe,
-} from "@/app/components/substrateRecipeClient";
-import { InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
+import {AssertSubstrateRecipe,} from "@/app/components/substrateRecipeClient";
+import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
-import {AssertBag, BagSelector} from "@/app/components/bagClient";
-import {AssertFruit, FruitSelector} from "@/app/components/fruitClient";
-import {AssertFruitingChamber, FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
+import {AssertBag} from "@/app/components/bagClient";
+import {AssertFruit} from "@/app/components/fruitClient";
+import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 import {AssertGrainBatch} from "@/app/components/grainBatchClient";
-import {AssertJar, JarSelector} from "@/app/components/jarClient";
+import {AssertJar} from "@/app/components/jarClient";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
-import {AssertLc, LcSelector} from "@/app/components/lcClient";
-import {AssertLcSyringe, LcSyringeSelector} from "@/app/components/lcSyringeClient";
-import {AssertMss, MssSelector} from "@/app/components/mssClient";
+import {AssertLc} from "@/app/components/lcClient";
+import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
+import {AssertMss} from "@/app/components/mssClient";
 import {AssertPcRun} from "@/app/components/pcRunClient";
-import {AssertPlate, PlateSelector} from "@/app/components/plateClient";
+import {AssertPlate} from "@/app/components/plateClient";
 import {AssertProject} from "@/app/components/projectClient";
 import {AssertSale} from "@/app/components/saleClient";
-import {AssertSlant, SlantSelector} from "@/app/components/slantClient";
+import {AssertSlant} from "@/app/components/slantClient";
 import {AssertSpecies} from "@/app/components/speciesClient";
-import {AssertSporePrint, SporePrintSelector} from "@/app/components/sporePrintClient";
-import {AssertSporeSwab, SporeSwabSelectorTable} from "@/app/components/sporeSwabClient";
-import {AssertStasisTube, StasisTubeSelectorTable} from "@/app/components/stasisTubeClient";
+import {AssertSporePrint} from "@/app/components/sporePrintClient";
+import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
+import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 import {AssertSubspecies} from "@/app/components/subspeciesClient";
 import {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
 import {AssertUser} from "./userClient";
-import {AssertWaterJar, WaterJarSelector} from "@/app/components/waterJarClient";
+import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {SelectorFor} from "@/app/components/selector";
-import {GrainWaterJarSelector} from "@/app/components/grainWaterJarClient";
-import {PlugsSelector} from "@/app/components/plugsClient";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -94,7 +85,8 @@ export function MainCollectionInputOrRead({label, placeholder, onIdSelected, cop
     }
     return <div>
         {/* INPUT FOR MAINCOLLECTIONID */}
-        <InputTextInlineTitle label={(label || "ID TO")+":"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/}
+        <InputTextInlineTitle label={(label || "ID TO") + ":"} value={id} readonly={false}
+                              errorMessage={undefined/* TODO: ???*/}
                               placeholder={placeholder || "Destination"} onChange={(s) => updateId(s || "")}/>
         {/*<TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}*/}
         {/*         updateTextHandler={updateId} readonly={false}/>*/}
@@ -175,7 +167,7 @@ export function IsTypeNew(finalType: string): (inpt: any) => void {
     return (inp: any) => {
         const typ = typeof inp
         if (!(typ === finalType)) {
-            throw 'field type was not '+finalType+", was "+typ
+            throw 'field type was not ' + finalType + ", was " + typ
         }
         return
     }
@@ -193,14 +185,14 @@ export function OptionalArrayOfType(key: string, input: any, validateChildren: (
     })
 }
 
-export function ViewInNewTabButton<T extends Entry>({entry}: { entry:T}) {
-    return <EntryLinkWrapper props={{entry:entry, openInNewTab: true}}>
+export function ViewInNewTabButton<T extends Entry>({entry}: { entry: T }) {
+    return <EntryLinkWrapper props={{entry: entry, openInNewTab: true}}>
         <button className={"basicButtonSmall"}>{"View"}</button>
     </EntryLinkWrapper>
 }
 
 export function ListItemsRequest(entryType: string, hideDisposed: boolean = false) {
-    return fetch(BaseExternalUrl + "/db/list/" + entryType+(hideDisposed?"?hideDisposed=true":""), { // TODO: ensure hiding disposed works!
+    return fetch(BaseExternalUrl + "/db/list/" + entryType + (hideDisposed ? "?hideDisposed=true" : ""), { // TODO: ensure hiding disposed works!
         method: 'Get',
         credentials: 'include',
         headers: clientPostRequestHeaders,
@@ -519,6 +511,7 @@ export function viewUrlFor(itemType: string, newId: string) {
 export function viewApiUrlFor(itemType: string, id: string) {
     return apiUrl("/get/" + itemType + "/" + id)
 }
+
 export function getUrlFor(itemType: string, id: string) {
     return viewApiUrlFor(itemType, id)
 }
@@ -604,13 +597,13 @@ export function setFormImages(filePrefix: string, formData: FormData, pics: any[
 
 export function setFormFull(formData: FormData, dataObj: any, pics?: any[], contams?: any[], flushes?: any[]) {
     formData.set("data", JSON.stringify(dataObj))
-    if (pics && pics.length > 0){
+    if (pics && pics.length > 0) {
         setFormImages("newPic", formData, pics)
     }
-    if (contams && contams.length > 0){
+    if (contams && contams.length > 0) {
         setFormImages("newContam", formData, contams)
     }
-    if (flushes && flushes.length > 0){
+    if (flushes && flushes.length > 0) {
         setFormImages("newFlush", formData, flushes)
     }
 }
@@ -628,23 +621,25 @@ export interface Importable {
     _id: string
 }
 
-export function EntryUrlId(item: Entry){
+export function EntryUrlId(item: Entry) {
     return (item && typeof (item as any).getIdUrlEncoded === "function") ? (item as any).getIdUrlEncoded() : item.getId()
 }
 
 export interface Entry {
     getId(): string;
+
     entryType(): string;
 }
+
 // export interface StringNameEntry extends Entry { // TODO: USE?!
 //     getIdUrlEncoded(): string;
 // }
 type TypeAsserter<T> = (value: unknown) => asserts value is T;
 
-export function ImportResponseHandler<T extends Importable>(asserter: TypeAsserter<T>, typeStr: string, setErr: (e:any)=>void): (res: Response)=>void {
-    return (res: Response)=>{
+export function ImportResponseHandler<T extends Importable>(asserter: TypeAsserter<T>, typeStr: string, setErr: (e: any) => void): (res: Response) => void {
+    return (res: Response) => {
         HandleJsonResponse(res)
-            .then(item=>{
+            .then(item => {
                 asserter(item)
                 window.location.assign(viewUrlFor(typeStr, item._id))
             })
@@ -652,7 +647,7 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
     }
 }
 
-export function DoImportRequest<T extends Importable>(body: any, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
+export function DoImportRequest<T extends Importable>(body: any, typeStr: string, asserter: TypeAsserter<T>, setErr: (e: any) => void, cookies: string) {
     fetch(importApiUrlFor(typeStr), {
         method: "POST",
         headers: clientPostRequestHeaders,
@@ -666,7 +661,7 @@ export function DoImportRequest<T extends Importable>(body: any, typeStr: string
         .catch(ErrHandler(setErr));
 }
 
-export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void): Promise<T|undefined> {
+export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string, asserter: TypeAsserter<T>, setErr: (e: any) => void): Promise<T | undefined> {
     return fetch(viewApiUrlFor(itemType, typeStr), {
         method: "GET",
         headers: clientPostRequestHeaders,
@@ -675,20 +670,20 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
             asserter(newItem)
             return newItem
         })
-        .catch(e=>{
-                ErrHandler(setErr)(e)
+        .catch(e => {
+            ErrHandler(setErr)(e)
             return undefined
         });
 }
 
-export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string, dispatchUpdate:(isErr:boolean,text:string)=>void) {
+export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e: any) => void, cookies: string, dispatchUpdate: (isErr: boolean, text: string) => void) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
-        .then(ImportResponseHandler(asserter,typeStr, setErr))
-        .catch(caughtErr=>{
+        .then(ImportResponseHandler(asserter, typeStr, setErr))
+        .catch(caughtErr => {
             const newErr = JSON.stringify(caughtErr)
             setErr(newErr)
             dispatchUpdate(true, newErr)
-    })
+        })
 }
 
 export function HandleTxtResponse(res: Response): Promise<string> {
@@ -696,9 +691,9 @@ export function HandleTxtResponse(res: Response): Promise<string> {
     return res.text()
 }
 
-export function ErrHandler(setErr: (err:any)=>void): (err:any)=>void {
+export function ErrHandler(setErr: (err: any) => void): (err: any) => void {
     return (e: any) => {
-        setErr("error: "+JSON.stringify(e))
+        setErr("error: " + JSON.stringify(e))
     }
 }
 
@@ -717,61 +712,68 @@ export function FlexedSinglesGroup(props: React.PropsWithChildren<{}>) {
     return <div className={"flexedSinglesGroup"}>{props.children}</div>
 }
 
-export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, onClick: (item: T) => void, className?: string }>) {
-    return <tr className={"listPageTableRow nonHeaderRow"+(props.className?" "+props.className : "")} onClick={() => {
-        props.onClick && props.onClick(props.data)
-    }}>{props.children}</tr>
+export function ListPageTableRow<T>(props: React.PropsWithChildren<{
+    data: T,
+    onClick: (item: T) => void,
+    className?: string
+}>) {
+    return <tr className={"listPageTableRow nonHeaderRow" + (props.className ? " " + props.className : "")}
+               onClick={() => {
+                   props.onClick && props.onClick(props.data)
+               }}>{props.children}</tr>
 }
 
 export interface ListTableColumn<T> {
     key: string
-    f: (v:T)=>string
-    fit:boolean
+    f: (v: T) => string
+    fit: boolean
 }
 
-export function NewColumn<T>(key:string,f:(v:T)=>any,fit?:boolean):ListTableColumn<T> {
-    return {key:key,f:f,fit:fit||false}
+export function NewColumn<T>(key: string, f: (v: T) => any, fit?: boolean): ListTableColumn<T> {
+    return {key: key, f: f, fit: fit || false}
 }
 
-export function ListPageTable<T extends Entry>({data, onClick, cols,className, newClass, disposed, blacklist}: {
+export function ListPageTable<T extends Entry>({data, onClick, cols, className, newClass, disposed, blacklist}: {
     data: T[],
     onClick?: (v: T) => void,
     cols: ListTableColumn<T>[],
     className?: string,
-    newClass: (inp: any)=>T,
+    newClass: (inp: any) => T,
     disposed?: boolean,
     blacklist?: string[],
     // TODO: allow blacklisting and disposed
     // TODO: give this a reload button????
-}){
+}) {
     const [disposedDisplayStatus, setDisposedDisplayStatus] = useState(disposed) // TODO: use!
     const [blacklistInternal, setBlacklistInternal] = useState<string[]>(blacklist || []) // TODO: use!
     //const [hidden, setHidden] = useState<boolean[]>(data.map(d=>false))
-    const classes = cols.map(c=>{
-        return "text-left"+(c.fit ? " fit" : "")
+    const classes = cols.map(c => {
+        return "text-left" + (c.fit ? " fit" : "")
     })
-    useEffect(()=>{
-        if ((blacklistInternal === undefined || blacklistInternal.length === 0)&&(blacklist ===undefined || blacklist.length === 0)){
-          return
+    useEffect(() => {
+        if ((blacklistInternal === undefined || blacklistInternal.length === 0) && (blacklist === undefined || blacklist.length === 0)) {
+            return
         }
         setBlacklistInternal(blacklist || [])
-    },[blacklist])
+    }, [blacklist])
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
-            {cols.map((col,i)=>{
+            {cols.map((col, i) => {
                 // if (hidden[i]) {
                 //     return null
                 // }
-                return <th className={classes[i]} key={i} >{col.key}</th>
+                return <th className={classes[i]} key={i}>{col.key}</th>
             })}
         </tr>
-        {data.map(newClass).map((item,i) => {
+        {data.map(newClass).map((item, i) => {
             // TODO: handle show if disposed and stuff
-            if (blacklistInternal.includes(item.getId()) || ((disposedDisplayStatus !== undefined)&&(disposedDisplayStatus?("disposed" in item/*disposed only*/):(!("disposed" in item)/*undisposed only*/)))){
+            if (blacklistInternal.includes(item.getId()) || ((disposedDisplayStatus !== undefined) && (disposedDisplayStatus ? ("disposed" in item/*disposed only*/) : (!("disposed" in item)/*undisposed only*/)))) {
                 return null // TODO: ensure working
             }
-            return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
-                {cols.map((col,i)=>{
+            return <ListPageTableRow className={className} key={i} data={item} onClick={(v) => {
+                onClick && onClick(v)
+            }}>{/* TODO: ADD EXPANSION???*/}
+                {cols.map((col, i) => {
                     // if (hidden[i]) {
                     //     return null
                     // }
@@ -784,92 +786,98 @@ export function ListPageTable<T extends Entry>({data, onClick, cols,className, n
 
 export function NumberToDateStr(n: number): string {
     const d = new Date(n)
-    return (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()
+    return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear()
 }
 
 export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
     doSelect: (val?: T) => void,
-    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
-    entryType:string,
-    entryTypes:string,
-    asserter: (val: any)=>void
-}>){
+    table: (items: T[], onSelect: (v?: T) => void) => JSX.Element,
+    entryType: string,
+    entryTypes: string,
+    asserter: (val: any) => void
+}>) {
     const [err, setErr] = useState<string | undefined>(undefined)
     const [loaded, setLoaded] = React.useState(false);
     const [data, setData] = React.useState<ListResult<T> | undefined>(undefined);
-    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
-        try {
-            AssertDualListResult<T>(result, props.asserter)
-            setData(result)
-            setLoaded(true)
-            return
-        } catch (e) {
+    useEffect(() => {
+        ListItemsRequest(props.entryTypes).then((result) => {
+            try {
+                AssertDualListResult<T>(result, props.asserter)
+                setData(result)
+                setLoaded(true)
+                return
+            } catch (e) {
+                console.error(JSON.stringify(e))
+                throw e
+            }
+        }).catch(e => {
             console.error(JSON.stringify(e))
-            throw e
-        }
-    }).catch(e => {
-        console.error(JSON.stringify(e))
-        setErr("error on listItems request: " + JSON.stringify(e))
-    })},[])
+            setErr("error on listItems request: " + JSON.stringify(e))
+        })
+    }, [])
     if (!loaded || data === undefined) {
         return <div>
             <ErrorDisplay err={err}/>
-            <div>{"Loading "+props.entryType+" Selector"}</div>
+            <div>{"Loading " + props.entryType + " Selector"}</div>
         </div>
     }
     return <Subform>
         <ErrorDisplay err={err}/>
         <SelectorTableWithHeader header={"Recent"} data={data?.recent} onSelect={props.doSelect} table={props.table}/>
-        <SelectorTableWithHeader header={"Standard"} data={data?.standard} onSelect={props.doSelect} table={props.table}/>
+        <SelectorTableWithHeader header={"Standard"} data={data?.standard} onSelect={props.doSelect}
+                                 table={props.table}/>
         <SelectorCreationArea>{props.children}</SelectorCreationArea>
     </Subform>
 }
 
-export function SelectorCreationArea(props:React.PropsWithChildren<{}>){
+export function SelectorCreationArea(props: React.PropsWithChildren<{}>) {
     const [creatorOpen, setCreatorOpen] = React.useState(false);
-    if (!props.children){
+    if (!props.children) {
         return null
     }
-    if (!creatorOpen){
-        return <button className={"buttonFullWidth basicButtonSmall"} onClick={e=>{
+    if (!creatorOpen) {
+        return <button className={"buttonFullWidth basicButtonSmall"} onClick={e => {
             e.stopPropagation();
             setCreatorOpen(true);
         }}>{"Create one instead"}</button>
     }
-    return <><button className={"basicButtonSmall"} onClick={e=>{
-        e.stopPropagation();
-        setCreatorOpen(false);
-    }}>{"Close creator"}</button>
+    return <>
+        <button className={"basicButtonSmall"} onClick={e => {
+            e.stopPropagation();
+            setCreatorOpen(false);
+        }}>{"Close creator"}</button>
         {props.children}
     </>
 }
 
 export function ExistingRecentSelector<T extends Entry>(props: React.PropsWithChildren<{
     doSelect: (val?: T) => void,
-    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
-    entryType:string,
-    entryTypes:string,
-    asserter: (val: any)=>void,
+    table: (items: T[], onSelect: (v?: T) => void) => JSX.Element,
+    entryType: string,
+    entryTypes: string,
+    asserter: (val: any) => void,
     hideDisposed?: boolean,
-}>){
+}>) {
     const [err, setErr] = useState<string | undefined>(undefined)
     const [loaded, setLoaded] = React.useState(false);
     const [data, setData] = React.useState<T[] | undefined>(undefined);
-    useEffect(()=>{ListItemsRequest(props.entryTypes, props.hideDisposed).then((result) => {
-        try {
-            AssertArrayResult<T>(result, props.asserter)
-            setLoaded(true)
-            setData(result)
-        } catch (e) {
-            throw e
-        }
-    }).catch(e => {
-        setErr("error on listItems request: " + JSON.stringify(e))
-    })},[])
+    useEffect(() => {
+        ListItemsRequest(props.entryTypes, props.hideDisposed).then((result) => {
+            try {
+                AssertArrayResult<T>(result, props.asserter)
+                setLoaded(true)
+                setData(result)
+            } catch (e) {
+                throw e
+            }
+        }).catch(e => {
+            setErr("error on listItems request: " + JSON.stringify(e))
+        })
+    }, [])
     if (!loaded || data === undefined) {
         return <div>
             <ErrorDisplay err={err}/>
-            <div>{"Loading "+props.entryType+" Selector"}</div>
+            <div>{"Loading " + props.entryType + " Selector"}</div>
         </div>
     }
     return <Subform>
@@ -879,18 +887,18 @@ export function ExistingRecentSelector<T extends Entry>(props: React.PropsWithCh
     </Subform>
 }
 
-export function SelectorTableWithHeader<T>({header, data,table,onSelect}:{
+export function SelectorTableWithHeader<T>({header, data, table, onSelect}: {
     header: string,
     data?: T[],
     onSelect: (val?: T) => void,
-    table:(items: T[], onSelect: (v?: T) => void)=>JSX.Element
-}){
-    if(!data || data.length===0){
+    table: (items: T[], onSelect: (v?: T) => void) => JSX.Element
+}) {
+    if (!data || data.length === 0) {
         return null
     }
     return <>
         <div className={"text-xl"}>{header}</div>
-        {table(data,onSelect)}
+        {table(data, onSelect)}
     </>
 }
 
@@ -942,11 +950,15 @@ function depthAndEntryClasses(depth: number, entryType?: string) {
     return " depth" + depth + (entryType ? " " + entryType : "")
 }
 
-export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, isTopLevel: boolean, className?: string }>) {
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{
+    entryType: string,
+    isTopLevel: boolean,
+    className?: string
+}>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div role={(props.isTopLevel?'main ':'')+"form"}
-            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>
+        <div role={(props.isTopLevel ? 'main ' : '') + "form"}
+             className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>
             {props.children}
         </div>
     </DepthProvider>
@@ -956,17 +968,25 @@ export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryTyp
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div role={'form'}
-            className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>
+             className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>
             {props.children}
         </div>
     </DepthProvider>
 }
 
+export function IsMainCollEntryType(entryType: string) {
+    return ["bag", "fruit", "fruitingChamber", "grainWaterJar", "jar", "lc", "lcSyringe", "mss", "plate", "plugs", "slant", "sporePrint", "sporeSwab", "stasisTube", "waterJar"].includes(entryType)
+}
+
 export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div id={props.id} role='main form' data-testid={"display-"+props.entryType} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>
-                {props.children}
+        <div id={props.id} itemScope
+             /* TODO: SET THIS TO THE URL*/itemID={(props.id !== undefined )?(IsMainCollEntryType(props.entryType) ? props.id : `${props.entryType} ${props.id}`):""/*TODO: empty ok?*/}
+             itemType={`https://schema.org/Thing`/* TODO: ensure ok*/} role='main form'
+             data-testid={"display-" + props.entryType}
+             className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>
+            {props.children}
         </div>
     </DepthProvider>
 }
@@ -981,7 +1001,8 @@ export function Subform(props: React.PropsWithChildren<{}>) {
 }
 
 export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
-    return <EntryLinkForId props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false}}/>
+    return <EntryLinkForId
+        props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false}}/>
 }
 
 export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {
@@ -1023,7 +1044,7 @@ export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeA
         body: JSON.stringify(body)
     })
         .then(HandleJsonResponse)
-        .then((entry:any):T => {
+        .then((entry: any): T => {
             asserter(entry)
             return entry
         })
@@ -1032,7 +1053,7 @@ export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeA
 export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return SendMultipartRequest(createApiUrlFor(entryType), formData, cookies)
         .then(HandleJsonResponse)
-        .then((entry):T => {
+        .then((entry): T => {
             asserter(entry)
             return entry
         })
@@ -1049,8 +1070,9 @@ export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, 
             return entry
         })
 }
+
 export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
-    return SendMultipartRequest(updateApiUrlFor(entryType,urlId), formData, cookies)
+    return SendMultipartRequest(updateApiUrlFor(entryType, urlId), formData, cookies)
         .then(HandleJsonResponse)
         .then((entry) => {
             asserter(entry)
@@ -1064,19 +1086,19 @@ export interface PopupInfo {
     isErr: boolean // TODO: use this!
 }
 
-export function PopupApp({info}: { info:PopupInfo }) {
+export function PopupApp({info}: { info: PopupInfo }) {
     const [isOpen, setIsOpen] = useState(false);
     const [doneWithFirstLoad, setDoneWithFirstLoad] = useState<boolean>(false);
     const [data, setData] = useState<PopupInfo>(info);
     useEffect(() => {
-        if(doneWithFirstLoad){
+        if (doneWithFirstLoad) {
             setData(info)
             setIsOpen(true)
-        }else{
+        } else {
             setDoneWithFirstLoad(true);
         }
     }, [info]);
-    const close = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>)=>{
+    const close = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         e.stopPropagation()
         e.preventDefault()
         setIsOpen(false)
@@ -1085,7 +1107,7 @@ export function PopupApp({info}: { info:PopupInfo }) {
         return <div className={"popupModal"}>
             <div className={"popupModalContent"}>
                 <h3>{data.header}</h3>
-                <p className={data.isErr?"error":""}>{data.text || "no text set, you should never see this message"}</p>
+                <p className={data.isErr ? "error" : ""}>{data.text || "no text set, you should never see this message"}</p>
                 <button className={"basicButton buttonFullWidth"} onClick={close}>{"Close"}</button>
             </div>
         </div>

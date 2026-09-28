@@ -8,7 +8,7 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {BagData} from "@/app/components/bagServer";
 import {
@@ -293,7 +293,7 @@ export default function BagDisplay(
     return (
         <DisplayFormWrapper entryType={"bag"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
+            <ViewPageEntryID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>

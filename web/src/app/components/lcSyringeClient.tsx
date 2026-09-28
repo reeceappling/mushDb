@@ -37,7 +37,7 @@ import {
     ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import {
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
@@ -295,7 +295,7 @@ export default function LcSyringeDisplay(
     }
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err}/>
-        <ID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
+        <ViewPageEntryID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
         <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
         <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
         <FlexedArea>

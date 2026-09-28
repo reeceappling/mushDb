@@ -13,7 +13,7 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import ID from "@/app/components/formSubcomponents/id";
+import ViewPageEntryID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     InitialPicsEntries, IsValidPicWithNotesIncoming,
@@ -246,7 +246,7 @@ export default function StasisTubeDisplay(
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
                 <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
+                <ViewPageEntryID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>
