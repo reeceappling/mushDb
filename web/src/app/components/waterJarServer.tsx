@@ -3,22 +3,6 @@ import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient";
 
-// export function TestWaterOk(){
-//     const now = new Date().getTime()
-//     const testNote = ()=>{
-//         return {time: new Date().getTime(), note:"TEST_NOTE_TEXT_HERE"}
-//     }
-//     const testNotes: Note[] = [testNote(), testNote(), testNote()]
-//     const a: WaterJarData = {
-//         _id: "(WATER JAR ID HERE)",
-//         creationDate: now,
-//         pcRun: "(PC RUN ID HERE)",
-//         notes: [...testNotes],
-//         lastUpdated: 789,
-//         acl: TestAcl(), // TODO: do we want this?
-//     }
-//     return a
-// }
 export interface WaterJarData {
     _id: string
     creationDate: number

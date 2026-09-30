@@ -13,7 +13,7 @@ export default function EntryLinkForId(
             linkId: string,
             displayId?: string,
             openInNewTab?: boolean;
-            // TODO: itemProp?
+            itemProp?: string // TODO: use this everywhere? maybe temporarily get rid of...
         };
     }) {
     return <EntryLinkIdWrapper props={props}>
@@ -60,7 +60,7 @@ export function EntryLinkIdWrapper(
     const itemTypeSchemaUrl = ""/* TODO: URL HERE!*/
     if (props.openInNewTab===true){
         // TODO: prefetching? return <Link to={"/view/${props.entryType}/${props.linkId}"} target={"_blank"} rel={"noopener noreferrer"}>{children}</Link>
-        return <a itemScope={true} itemProp={props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
+        return <a itemScope={true} itemProp={/* TODO: ensure ok and uses id and not contents*/props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
             {children}
         </a>
     }

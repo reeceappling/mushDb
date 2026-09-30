@@ -16,6 +16,7 @@ import (
 // required for all mainCollectionItems, as well as subspecies
 
 type Species struct {
+	// TODO: HOW TO DO UNCONFIRMED SPECIES AND SUBSPECIES????? "unconfirmed" prefix? or maybe just a separate field on each item that says geneticsConfirmed?
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
 	ScientificName    string `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`

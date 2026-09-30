@@ -43,7 +43,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import {MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
-import {JarRecipeData} from "@/app/components/jarRecipeServer";
+import {PcRunArea} from "@/app/components/pcRunClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -106,7 +106,7 @@ export default function WaterJarDisplay(
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
     // Helper states
     const [acl, setAcl] = useState(initial.acl)
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: THIS!
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: WaterJarData) => {
         setInitial(updated)
@@ -183,6 +183,9 @@ export default function WaterJarDisplay(
                                                 readonly={readonly}
                                                 initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <PcRunArea binaryId={data.pcRun}/>
+                </FlexedSinglesGroup>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -247,7 +250,7 @@ export function NewWaterJarForm(
 }
 
 export function WaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
-    const {dispatch} = useModalContext();
+    const {dispatch} = useModalContext(); // TODO: ????
     const [created, setCreated] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()

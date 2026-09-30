@@ -336,7 +336,7 @@ export function PcRunArea({binaryId}: {
     binaryId?: string,
 }) {
     const linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
-        <EntryLinkForId props={{linkId: binaryId, entryType: "pcRun", openInNewTab: false}}/> :
+        <EntryLinkForId props={{linkId: binaryId, entryType: "pcRun", openInNewTab: false, itemProp: "pcRun"}}/> :
         "unknown"}
     </div>
     return <div className={"pcRunArea"}>
