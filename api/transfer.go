@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -22,26 +25,43 @@ type InnocField struct { // TODO: multi-innocs?
 	Innoc *AlternateCollectionId `bson:"innoc,omitempty" json:"innoc,omitempty"`
 }
 
-func (in InnocField) Innoculatable() bool {
-	return in.Innoc == nil
+func (f InnocField) RequireNoInnoculation() error {
+	if f.Innoc != nil {
+		return errors.New("must not be innoculated")
+	}
+	return nil
 }
 
 type transferReason string
 
-var transferReasons = map[transferReason]string{
-	"outgrew":      "outgrew plate",
-	"contaminated": "parent was contaminated",
-	"sectoring":    "transferring a specific sector",
-	"age":          "plate is veryold",
+const xferReasonColonized transferReason = "colonized"
+const xferReasonReady transferReason = "ready"
+const xferReasonHarvest transferReason = "harvest"
+const xferReasonSporeSwabCreation transferReason = "spore swab creation" // TODO: ok to have spaces? // TODO: new!
+// TODO: which transfer reasons are for normal transfers? Which are for clones? Which are for Creating things like LCS, fruit harvest, etc?
+var transferReasons = map[transferReason]string{ // TODO: move these to autogenned?
+	"outgrew":                   "outgrew plate", // TODO: is colonized just this?
+	"contaminated":              "parent was contaminated",
+	"sectoring":                 "transferring a specific sector",
+	"age":                       "sample is very old",
+	xferReasonColonized:         "fully colonized", // TODO: how does this differ from outgrew?
+	xferReasonReady:             "ready",           // TODO: ?????
+	xferReasonHarvest:           "harvest",         // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
+	xferReasonSporeSwabCreation: string(xferReasonSporeSwabCreation),
 }
 
-var sporePrintColors = []SporePrintColor{
+var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?
 	SpColorBlack,
+	SpColorBrown,
+	SpColorRed,
+	SpColorOrange,
+	SpColorYellow,
 	SpColorTanLight,
+	SpColorWhite,
 	SpColorClear,
 }
 
-var sporePrintDensities = []SporePrintDensity{
+var sporePrintDensities = []SporePrintDensity{ // TODO: move these to autogenned?
 	SpDensityHeavy,
 	SpDensityAvg,
 	SpDensitySparse,
@@ -51,8 +71,8 @@ var sporePrintDensities = []SporePrintDensity{
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
 	AlternateCollectionIdField `bson:"inline"`
 	From                       MainCollectionId `bson:"from" json:"from"`
-	To                         MainCollectionId `bson:"to" json:"to"` // fruit is mainCollectionId
-	FromType                   string           `json:"fromType"`     //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	To                         MainCollectionId `bson:"to" json:"to"` // TODO: make notes here?
+	FromType                   string           `json:"fromType"`     //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box, etc
 	ToType                     string           `json:"toType"`       //sourceType
 	CreationDateField          `bson:"inline"`
 	Reason                     transferReason `bson:"reason" json:"reason"`
@@ -63,18 +83,131 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-func (t Transfer) PicsModsForChild() *Mods {
-	if t.ToImage == nil {
-		return NewMods()
+func (t *Transfer) GetParent(ctx context.Context) (ParentResult, error) {
+	return invalidGetParentEntryTypeResult()
+}
+
+func (xfersOut TransfersOutField) getTransfersChildren(ctx context.Context) (out ChildrenResult, err error) {
+	db := DbFrom(ctx)
+	out = ChildrenResult{}
+	for _, xferid := range xfersOut.TransfersOut {
+		var xfer Transfer
+		if err = db.Collection(TransfersCollName).FindOne(ctx, BsonFindFilter(IDfld, xferid)).Decode(&xfer); err != nil {
+			return out, err
+		}
+		child, err := GetMainCollectionItemWithId(ctx, xfer.To)
+		if err != nil {
+			return out, err
+		}
+		switch child.(type) {
+		case *Bag:
+			item, ok := child.(*Bag)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Bags = append(out.Bags, item)
+		case *Fruit:
+			item, ok := child.(*Fruit)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Fruits = append(out.Fruits, item)
+		case *FruitingChamber:
+			item, ok := child.(*FruitingChamber)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.FruitingChambers = append(out.FruitingChambers, item)
+		case *GrainJar:
+			item, ok := child.(*GrainJar)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.GrainJars = append(out.GrainJars, item)
+		case *LiquidCulture:
+			item, ok := child.(*LiquidCulture)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.LiquidCultures = append(out.LiquidCultures, item)
+		case *LcSyringe:
+			item, ok := child.(*LcSyringe)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.LcSyringes = append(out.LcSyringes, item)
+		case *MSS:
+			item, ok := child.(*MSS)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Msss = append(out.Msss, item)
+		case *Plate:
+			item, ok := child.(*Plate)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Plates = append(out.Plates, item)
+		case *PlugsJar:
+			item, ok := child.(*PlugsJar)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Plugs = append(out.Plugs, item)
+		case *Slant:
+			item, ok := child.(*Slant)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.Slants = append(out.Slants, item)
+		case *SporePrint:
+			item, ok := child.(*SporePrint)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.SporePrints = append(out.SporePrints, item)
+		case *SporeSwab:
+			item, ok := child.(*SporeSwab)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.SporeSwabs = append(out.SporeSwabs, item)
+		case *StasisTube:
+			item, ok := child.(*StasisTube)
+			if !ok {
+				return out, errors.New("failed to change item type before adding to list")
+			}
+			out.StasisTubes = append(out.StasisTubes, item)
+		default:
+			return out, errors.New("unknown child type: " + child.EntryType())
+		}
 	}
-	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.ToImage)
+	return out, nil
+}
+func transferPicMod(creationDate unix.Time, imgLoc ImageLocation, notes []Note) PicWithNotes {
+	return newPicWithNotes(creationDate, notes, imgLoc)
+}
+func (t Transfer) picMods(item HasPicsField, loc *ImageLocation) *Mods {
+	out := NewMods()
+	if loc == nil {
+		return out
+	}
+	pic := transferPicMod(t.CreationDate, *loc, []Note{ /*TODO: note?*/ })
 	return NewMods().
 		withMostRecentImage(&pic).
-		withPics([]PicWithNotes{pic})
+		withPics(item.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
+	// TODO: does this need update timestamp?
+}
+
+func (t Transfer) PicsModsForParent(parent HasPicsField) *Mods {
+	return t.picMods(parent, t.FromImage)
+}
+func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
+	return t.picMods(child, t.ToImage)
 }
 
 // Perms have not been checked when this runs yet
-func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (geneticSource, error) {
+func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (MainCollectionItem, error) {
 	tempItem, exists := mainCollMap(entryType)
 	if !exists {
 		return nil, errors.New("invalid entry type: " + entryType)
@@ -88,15 +221,15 @@ func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) 
 
 func initializeTransfers(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(TransfersCollName)
+	coll := DbFrom(ctx).Collection(TransfersCollName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		// TODO: ensure from index indexes all of the child ids
-		// TODO: newSimpleIndex("from", "from", true, false, false),
-		// TODO: newSimpleIndex("to", "to", true, false, false),
-		// TODO: newSimpleIndex("fromType", "fromType", false, false, false),
-		// TODO: newSimpleIndex("toType", "toType", false, false, false),
 		creationDateIndexModel,
-		// TODO: newSimpleIndex("reason", "reason", false, false, false),
+		// TODO: ensure from index indexes all of the child ids (multiple only for very specific cases?)
+		// newSimpleIndex("from", "from", true, false, false), // TODO: do we want to search by source?
+		// newSimpleIndex("to", "to", true, false, false), // TODO: do we want to search by destination?
+		// newSimpleIndex("fromType", "fromType", false, false, false),
+		// newSimpleIndex("toType", "toType", false, false, false),
+		// newSimpleIndex("reason", "reason", false, false, false),
 		//FromImage (no index)
 		//ToImage (no index)
 		//Notes (no index unless tags)
@@ -108,47 +241,47 @@ func initializeTransfers(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, then create it
 	// TODO: also create many-to-one monotub test transfer
-	testItem := &Transfer{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		From:                       exPlate,
-		To:                         exJar,
-		FromType:                   "plate",
-		ToType:                     "jar",
-		CreationDateField:          CreationDateField{exampleTime},
-		Reason:                     "A_REASONABLE_TRANSFER_REASON",
-		FromImage:                  (*ImageLocation)(&exPicLoc),
-		ToImage:                    (*ImageLocation)(&exPicLoc),
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		imgLoc := (*ImageLocation)(&exPicLoc)
+		testItem := &Transfer{
+			AlternateCollectionIdField: defaultAltIdField,
+			From:                       exPlate,
+			To:                         exJar,
+			FromType:                   "plate",
+			ToType:                     "jar",
+			CreationDateField:          CreationDateField{exampleTime},
+			Reason:                     xferReasonReady,
+			FromImage:                  imgLoc,
+			ToImage:                    imgLoc,
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanReadAcl(nil), // TODO: ensure updated
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createTransferRequest struct {
-	From     MainCollectionId `json:"from"`
-	To       MainCollectionId `json:"to"`
-	FromType *string          `json:"fromType,omitempty"`
-	Reason   string           `json:"reason"`
+	From   MainCollectionId `json:"from"`
+	To     MainCollectionId `json:"to"`
+	Reason string           `json:"reason"`
 	// FromImage == 'picFrom'
 	// ToImage == 'picTo'
+	FromType *string `json:"fromType,omitempty"`
 	NotesField
+	DisposeParent bool `json:"disposeParent"`
 }
 
-type CtxKey string
-
-const SessionCtxKey CtxKey = "mongoTxSession"
-
 func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error)) (any, error) {
-	sessionOptions := options.Session() // TODO: change?
+	sessionOptions := options.Session()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
 		return nil, err
 	}
 	wc := writeconcern.Majority()
-	txnOptions := options.Transaction().SetWriteConcern(wc) // TODO: ok?
+	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
-	return sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+	return sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		defer sess.EndSession(ctx)
 		out, err := transact(sessCtx)
 		if err != nil {
@@ -160,37 +293,66 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 		return out, nil
 	}, txnOptions)
 }
+func newTxnNoInterface(ctx context.Context, transact func(mongo.SessionContext) error) error {
+	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		return nil, transact(sessCtx)
+	})
+	return err
+}
 
-func createTransferHandler(w http.ResponseWriter, r *http.Request) {
-	data := createTransferRequest{}
-	id := newAlternateCollectionId()
-	b58id := id.AsBase58()
+// TODO: consider using
+func newTxnReturnsStatus(ctx context.Context, transact func(mongo.SessionContext) (int, error)) (statusCode int, err error) {
+	transactWrapped := func(sctx mongo.SessionContext) (any, error) {
+		return transact(sctx)
+	}
+	sc, err := newTxn(ctx, transactWrapped) // TODO: cant transact not return interface?
+	if err != nil {
+		statusCode = sc.(int)
+	}
+	return
+}
+
+func multipartReaderInitialize[T any](ctx context.Context, w http.ResponseWriter, r *http.Request, data *T) (*multipart.Reader, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
-	defer r.Body.Close()
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
-	println("opened up multipart reader successfully")
 	p1, err := reader.NextPart()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		println("failed to go to next part: " + err.Error()) // TODO: ok?
+		http.Error(w, "failed to go to next part: "+err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
 	defer p1.Close()
 	// Process text (or object)
 	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
+	err = errors.Join(errr, p1.Close())
+	if err != nil {
+		println("failed to read Data from form: " + err.Error()) // TODO: ok?
 		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
 	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
+	err = json.Unmarshal(bs, data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to unmarshal Data from form"), err), http.StatusBadRequest)
+		return nil, err
+	}
+	return reader, nil
+}
+
+func createTransferHandler(w http.ResponseWriter, r *http.Request) {
+	data := createTransferRequest{}
+	id := newAlternateCollectionId()
+	ctx, now := request.UnixTime(r.Context())
+	b58id := id.AsBase58()
+	reader, err := multipartReaderInitialize(ctx, w, r, &data)
+	defer r.Body.Close()
+	if err != nil {
+		// Already wrote
 		return
 	}
 	// Get any images
@@ -228,7 +390,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var newFileNameWithPrefixPath string
-		newFileNameWithPrefixPath, err = pics.SaveFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
+		newFileNameWithPrefixPath, err = pics.SavePicFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
 		if err != nil {
 			http.Error(w, "failed to save image", http.StatusBadRequest)
 			return
@@ -255,21 +417,18 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ctx := r.Context()
 	parentId := data.From
 	childId := data.To
-	now := unixTimeForNow()
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	childMapEntry := idMapEntry{}
 	var fromType string
 	if data.FromType != nil {
 		fromType = *data.FromType
 	} else {
 		//if fromType is nil, then we must go find the fromType
-		fromType, err = getEntryTypeForId(ctx, parentId)
+		fromType, err = GetEntryTypeForId(ctx, parentId)
 	}
 	// Get parent and child items
-	err = db.Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
+	err = DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{IDfld: childId}).Decode(&childMapEntry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "child not found in id db: "+err.Error(), http.StatusNotFound)
@@ -278,23 +437,31 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error getting child from id db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var parent, child geneticSource
 
-	parent, err = getGeneticItem(ctx, fromType, data.From)
+	parent, err := getGeneticItem(ctx, fromType, data.From)
 	if err != nil {
 		http.Error(w, "failed to get parent item: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	child, err = getGeneticItem(ctx, childMapEntry.EntryType, data.To)
+	child, err := getGeneticItem(ctx, childMapEntry.EntryType, data.To)
 	if err != nil {
 		http.Error(w, "failed to get child item: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// ensure child is innoculatable and parent is not disposed
+	if err = child.Innoculatable(); err != nil {
+		http.Error(w, "child is not innoculatable. "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if parent.DisposalInfo() != nil {
+		http.Error(w, "cannot transfer from disposed entries", http.StatusBadRequest)
 		return
 	}
 	if err = parent.CanTransferTo(child); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Perms are checked later, and only guests cannot write
+	// Perms are checked earlier, and only guests cannot write
 	// Create Transfer
 	xfer := Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -307,22 +474,11 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		FromImage:                  (*ImageLocation)(fromPic),
 		ToImage:                    (*ImageLocation)(toPic),
 		NotesField:                 data.NotesField,
-		LastUpdatedField:           LastUpdatedFieldForNow(),
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   AclField{ACL: parent.Permissions()}, //set child perms to the parent perms!
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
-		if err != nil {
-			return nil, err
-		}
-
-		if err = setTransferParent(sessCtx, parent, xfer); err != nil {
-			return nil, errors.Join(errors.New("failed to set transfer parent"), err)
-		}
-		if err = child.setTransferChild(sessCtx, xfer, parent); err != nil {
-			return nil, errors.Join(errors.New("failed to set transfer child"), err)
-		}
-		return nil, nil
+		return nil, createTransferInTxn(sessCtx, parent, child, xfer, data.DisposeParent)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -341,9 +497,25 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func createTransferInTxn[T MainCollectionItem, U MainCollectionItem](ctx mongo.SessionContext, parent T, child U, xfer Transfer, dispose bool) error {
+	db := mongo.SessionFromContext(ctx).
+		Client().Database(dbName)
+	_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
+	if err != nil {
+		return err
+	}
+	if err = setTransferParent(ctx, parent, xfer, dispose); err != nil {
+		return errors.Join(errors.New("failed to set transfer parent"), err)
+	}
+	if err = child.setTransferChild(ctx, xfer, parent); err != nil {
+		return errors.Join(errors.New("failed to set transfer child"), err)
+	}
+	return nil
+}
+
 type updateTransferRequest struct {
 	NotesUpdateField
-	PermsOnRequest // TODO: should transfers always keep parent or child perms? // TODO: ????????? handle in typescript and handler!
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {
@@ -355,7 +527,10 @@ func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) 
 }
 
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -366,11 +541,6 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
@@ -386,3 +556,8 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
+
+//func deleteTransferHandler(w http.ResponseWriter, r *http.Request) {
+//	http.Error(w, "transfers cannot be deleted", http.StatusNotImplemented)
+//	return
+//}

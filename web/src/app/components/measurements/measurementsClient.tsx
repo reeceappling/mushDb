@@ -1,6 +1,6 @@
 'use client'
 
-import {HandleJsonResponse} from "@/app/components/common";
+import {clientPostRequestHeaders, HandleJsonResponse} from "@/app/components/common";
 import {createContext, ReactNode, useContext, useEffect, useState} from "react";
 import {CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis} from "recharts";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -54,12 +54,12 @@ export function TimespanProvider(
         endTime: props.initialEndTimeMs
     });
     const setStartTime = (st: number) => {
-        let upd = {...timespan}
+        const upd = {...timespan}
         upd.startTime = st;
         setTimespan(upd)
     }
     const setEndTime = (et?: number) => {
-        let upd = {...timespan}
+        const upd = {...timespan}
         upd.endTime = et;
         setTimespan(upd)
     }
@@ -93,9 +93,7 @@ export function NodeMeasurementsViewer({nodeName}: { nodeName: string }) {
         return fetch(BaseExternalUrl+"/sensorData/"+node, { // TODO: create this endpoint
             method: 'GET',
             body: JSON.stringify(span), // TODO: ensure ok
-            headers: {
-                'Content-type': "application/json"
-            },
+            headers: clientPostRequestHeaders,
         }).then(HandleJsonResponse)
             .then((results) => { // TODO: create this endpoint
                 return results as DiscreteData[]
@@ -105,9 +103,7 @@ export function NodeMeasurementsViewer({nodeName}: { nodeName: string }) {
         return fetch(BaseExternalUrl+"/sensorDataSince/"+node, {
             method: 'GET',
             body: JSON.stringify(last), // TODO: ensure ok
-            headers: {
-                'Content-type': "application/json"
-            },
+            headers: clientPostRequestHeaders,
         }).then(HandleJsonResponse)
             .then((results) => {
                 return results as DiscreteData[]

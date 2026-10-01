@@ -1,0 +1,161 @@
+# Execute with: ansible-playbook -i inventory.ini start-prod.yml
+# TODO: VALIDATE THIS WORKS! NOT DONE!
+# TODO: ensure go installed
+# TODO: ensure docker installed
+# TODO: ensure docker-compose installed
+# TODO: build api
+# TODO: launch docker-compose stack (if not already on)
+- name: Ensure Go (Golang) is installed and configured
+  hosts: all
+  become: true
+  vars:
+    go_version: "1.22.2" # TODO: FIX THIS!
+    go_archive: "go{{ go_version }}.linux-amd64.tar.gz" # TODO: FIX THIS!
+    go_download_url: "https://go.dev{{ go_archive }}"
+    go_install_dir: "/usr/local"
+  tasks:
+    - name: Check if the correct version of Go is already installed
+      ansible.builtin.command: "{{ go_install_dir }}/go/bin/go version"
+      register: go_current_version
+      changed_when: false
+      failed_when: false
+
+    - name: Block for installing Go
+      when: go_current_version.rc != 0 or go_version not in go_current_version.stdout
+      block:
+        - name: Download official Go tarball
+          ansible.builtin.get_url:
+            url: "{{ go_download_url }}"
+            dest: "/tmp/{{ go_archive }}"
+            mode: '0644'
+
+        - name: Remove any existing Go installation directory
+          ansible.builtin.file:
+            path: "{{ go_install_dir }}/go"
+            state: absent
+
+        - name: Extract Go archive to install directory
+          ansible.builtin.unarchive:
+            src: "/tmp/{{ go_archive }}"
+            dest: "{{ go_install_dir }}"
+            remote_src: true
+
+        - name: Clean up downloaded archive file
+          ansible.builtin.file:
+            path: "/tmp/{{ go_archive }}"
+            state: absent
+
+    - name: Ensure Go binary directory is in system-wide PATH
+      ansible.builtin.copy:
+        dest: /etc/profile.d/golang.sh
+        content: |
+          export PATH=$PATH:{{ go_install_dir }}/go/bin
+          export GOPATH=$HOME/go
+          export PATH=$PATH:$GOPATH/bin
+        mode: '0644'
+- name: Ensure Docker is installed and running
+  hosts: all
+  become: true
+  vars:
+    # Packages needed to fetch repositories securely over HTTPS
+    required_packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    # Official Docker packages to install
+    docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+
+  tasks:
+    - name: Install prerequisite system packages
+      # Prioritize apt module for Debian/Ubuntu distributions
+      ansible.builtin.apt:
+        name: "{{ required_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Create directory for Docker APT keyrings
+      # Creates secure folder for the GPG key as per modern Debian guidelines
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download and add Docker official GPG key
+      # Downloads the official key directly to the keyrings path
+      ansible.builtin.get_url:
+        url: https://docker.com
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Set up the official Docker repository
+      # Adds the repository mapping to the downloaded GPG key
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture if ansible_architecture != 'x86_64' else 'amd64' }} signed-by=/etc/apt/keyrings/docker.asc] https://docker.com {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Install official Docker Engine packages
+      # Installs Docker CE, CLI, and the Docker Compose plugin
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is started and enabled
+      # Configures systemd to launch Docker at boot and run it immediately
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add current user to the docker group
+      # Optional: Allows executing docker commands without typing sudo
+      ansible.builtin.user:
+        name: "{{ ansible_env.USER }}"
+        groups: docker
+        append: true
+- name: Manage Docker Compose Project
+  hosts: mainServer
+  become: true
+  vars:
+    project_path: /opt/my_project # TODO: FIX!
+
+  tasks:
+    - name: Create project directory if it does not exist
+      ansible.builtin.file:
+        path: "{{ project_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy project files to the target server
+      ansible.builtin.copy:
+        src: ./project_files/ # TODO: FIX!
+        dest: "{{ project_path }}/"
+        mode: '0644'
+
+    # TODO: copy env files to server?
+    # TODO: decrypt env files on server?
+    # TODO: decrypt mongodb key on server?
+
+    - name: Build and start Docker Compose services if not running
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_path }}"
+        state: present
+        build: always
+        env_files:
+          - "{{ project_path }}/.env.production" # TODO: FIX!
+      environment:
+        MY_UID: "{{ ansible_user_uid }}" # TODO: FIX!
+        MY_GID: "{{ ansible_user_gid }}" # TODO: FIX!
+  # 3. HANDLERS (Tasks that only run when notified by a change)
+#  handlers:
+#    - name: Restart Apache
+#      ansible.builtin.service:
+#        name: apache2
+#        state: restarted

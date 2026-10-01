@@ -4,8 +4,6 @@
 import {JSX, useState} from "react";
 import {CreatedLinkQuadCol, CreatedLinkTriCol} from "@/app/components/formSubcomponents/ovc";
 
-// TODO: notes added to create for stasisTube, waterJar
-
 export type Data<Type> = {
     data: Type,
     disabled: boolean,
@@ -43,7 +41,7 @@ export function InitialToAllEntries<Type>(a?: Type[]):AllEntries<Type>{
 
 export interface RevertableAreaProps<Type> {
     readonly?: boolean,
-    current?: AllEntries<Type>, // TODO: ensure everywhere is using this properly
+    current?: AllEntries<Type>,
     updateParent?: (entries: AllEntries<Type>) => void,
 }
 
@@ -67,21 +65,21 @@ export interface GroupProps<Type> {
 
 export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.Element){
     return (
-        function ({initialValues, readonly, updateParent, headerLevel, headerLevelOffset}: AreaProps<Type>) {
+        function FormListAreaAnonymous({initialValues, readonly, updateParent, headerLevel, headerLevelOffset}: AreaProps<Type>) {
             const [existing, setExisting] = useState(initialValues || [])
             const [newEntries, setNewEntries] = useState<Data<Type>[]>([])
-            const [blacklist, setBlacklist] = useState([...existing,...newEntries])
+            const [blacklist, setBlacklist] = useState([...existing,...newEntries]) // TODO; use blacklist?
             const updateInternal = (data: AllEntries<Type>) => {
                 updateParent && updateParent(data)
                 setBlacklist([...data.existing,...data.new])
             }
             const updateExisting = (data: Data<Type>[]) => {
-                let newExisting = [...data]
+                const newExisting = [...data]
                 updateInternal({existing: newExisting, new: newEntries})
                 setExisting(newExisting)
             }
             const updateNew = (data: Data<Type>[]) => {
-                let newNew = [...data]
+                const newNew = [...data]
                 updateInternal({existing: existing, new: newNew})
                 setNewEntries(newNew)
             }
@@ -111,6 +109,7 @@ export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.E
 export type OnViewCreatorTriCol = {
     txt: string,
     newCreationArea: OnViewCreatorTriColFunction,
+    needsTesting?: boolean, // TODO: remove later!
 }
 export type OnViewCreatorTriColFunction = (onCreate: AddCreatedTriColFunction) => JSX.Element
 export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => void
@@ -118,6 +117,7 @@ export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[], closeAfte
 export type OnViewCreatorQuadCol = {
     txt: string,
     newCreationArea: OnViewCreatorQuadColFunction,
+    needsTesting?: boolean, // TODO: remove later!
 }
 export type OnViewCreatorQuadColFunction = (onCreate: AddCreatedQuadColFunction) => JSX.Element
 export type AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter: boolean) => void

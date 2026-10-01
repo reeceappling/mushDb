@@ -1,39 +1,46 @@
-import {
-    ActionTypes,
-    useRfidReaderContext
-} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {ReactNode} from "react";
-import {BaseExternalUrl} from "@/app/components/Constants";
 
-export default function EntryLink(
+
+import { ReactNode} from "react";
+import {Entry, EntryUrlId, viewUrlFor} from "@/app/components/common";
+import Link from "next/link";
+
+export default function EntryLinkForId(
+    {
+        props,
+    }: {
+        props: {
+            entryType: string,
+            linkId: string,
+            displayId?: string,
+            openInNewTab?: boolean;
+            itemProp?: string // TODO: use this everywhere? maybe temporarily get rid of...
+        };
+    }) {
+    return <EntryLinkIdWrapper props={props}>
+        {props.displayId || props.linkId/* TODO: wrap in text tag?*/}
+    </EntryLinkIdWrapper>
+}
+
+export function EntryLinkWrapper<T extends Entry>(
     {
         props,
         children,
     }: {
         props: {
-            displayedId: string;
-            linkId: string;
-            entryType: string;
+            entry: T;
             openInNewTab?: boolean;
         };
         children: ReactNode;
     }) {
-    const {dispatch} = useRfidReaderContext()
-    const doNewTab = () => {
-        // TODO: THIS!!!!!
-    }
-    const changeModal = () => {
-        dispatch({
-            type: ActionTypes.SET_MODAL_INFO,
-            payload: {modalType: props.entryType, recordId: props.displayedId} // TODO: IS THIS OK?
-        })
-    }
-    return <div  data-cy-id="EntryLink" onClick={props.openInNewTab?doNewTab:changeModal}>{/* TODO: REMOVE MODAL??? */}
-        {children}
-    </div>
+    return <EntryLinkInternal props={{ // TODO: itemType, itemScope, itemAttribute, itemID?
+        entryType: props.entry.entryType(),
+        linkId: EntryUrlId(props.entry),
+        openInNewTab: props.openInNewTab,
+    }}>{children}</EntryLinkInternal>
 }
 
-export function EntryLinkWrapper(
+// TODO: swap all of these over to EntryLinkWrapper???
+export function EntryLinkIdWrapper(
     {
         props,
         children,
@@ -42,18 +49,45 @@ export function EntryLinkWrapper(
             linkId: string;
             entryType: string;
             openInNewTab?: boolean;
+            itemProp?: string; // TODO: USE THIS WHERE NEEDED
         };
         children: ReactNode;
     }) {
     const onClickStopPropagation = (e: React.MouseEvent) => {
         e.stopPropagation();
     }
+    const actualLink = viewUrlFor(props.entryType, props.linkId)
+    const itemTypeSchemaUrl = ""/* TODO: URL HERE!*/
     if (props.openInNewTab===true){
-        return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
+        // TODO: prefetching? return <Link to={"/view/${props.entryType}/${props.linkId}"} target={"_blank"} rel={"noopener noreferrer"}>{children}</Link>
+        return <a itemScope={true} itemProp={/* TODO: ensure ok and uses id and not contents*/props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}> // TODO: revert if not ok
             {children}
         </a>
     }
-    return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} onClick={onClickStopPropagation}>
+    return <a itemScope={true} itemProp={props.itemProp} itemType={itemTypeSchemaUrl} itemID={actualLink} href={actualLink} onClick={onClickStopPropagation}>
+        {children}
+    </a>
+}
+
+export function EntryLinkInternal(
+    {
+        props,
+        children,
+    }: {
+        props: {
+            entryType: string,
+            linkId: string,
+            openInNewTab?: boolean;
+        };
+        children: ReactNode;
+    }) {
+    const actualLink = viewUrlFor(props.entryType, props.linkId)
+    if (props.openInNewTab===true){ // TODO: itemType, itemScope, itemAttribute, itemID?
+        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={e=>e.stopPropagation()}>
+            {children}
+        </a>
+    }
+    return <a href={actualLink} onClick={e=>e.stopPropagation()}>
         {children}
     </a>
 }

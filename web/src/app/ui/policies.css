@@ -1,0 +1,19 @@
+div.policyParagraphs {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding-inline: 2em;
+    /*align-items: start; */
+    & > * {
+        max-width: 100%;
+        min-width: 25vw;
+        width: fit-content;
+        padding-block: 0.5em;
+    }
+
+}
+p.policyParagraph {
+    align-self: center;
+    justify-self: flex-start;
+    white-space: pre-wrap; /* ensures newlines and spacing in the txt file are kept */
+}

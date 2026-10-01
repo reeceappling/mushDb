@@ -1,0 +1,70 @@
+#---
+## TODO: THIS HAS NOT BEEN TESTED AT ALL!
+#
+## On control plane machine:
+## ansible-galaxy role install -r requirements.yml
+#
+#- name: Deploy project
+#  hosts: webservers # TODO; FIX!
+#  become: true # TODO; ??? become_user?
+#  roles:
+#    - role: geerlingguy.docker
+#    - role: geerlingguy.docker_compose
+#    - role: gantsign.golang
+#    - role: geerlingguy.nodejs
+#  vars:
+#    project_dir: /var/projects/mushDb # TODO: ??????
+#    golang_version: '1.24.2' # Specify your preferred Go version # TODO; FIX!
+#    golang_install_dir: '/opt/go/{{ golang_version }}'
+#    nodejs_version: "20.x" # TODO: FIX!
+#    nodejs_npm_global_packages:
+#      - name: typescript
+#        version: "5.4.5" # TODO; FIX!
+#
+#  tasks:
+#    - name: Ensure project files exist
+#      ansible.builtin.copy:
+#        src: /local/path/to/configs/ # TODO; FIX
+#        dest: "{{ project_dir }}" # TODO; FIX
+#      register: project_files
+#
+#    - name: Build if project files have changed
+#      ansible.builtin.command:
+#        cmd: go build -o bin/mushApi .
+#        chdir: "{{ project_dir }}"
+#      environment:
+#        GOOS: linux
+#        GOARCH: amd64
+#      args:
+#        creates: "{{ project_dir }}/bin/mushApi" # TODO: ok?
+#      when: project_files.changed  # Executes only if files were updated
+#    - name: Ensure env vars file exists
+#      # TODO: this!
+#
+#    - name: Delete old go binary # TODO: ok?
+#      ansible.builtin.file:
+#        path: "{{ project_dir }}/bin/mushApi"
+#        state: absent
+#
+#    - name: Ensure Go project is built
+#      ansible.builtin.command:
+#        cmd: go build -o bin/mushApi .
+#        chdir: "{{ project_dir }}"
+#      environment:
+#        GOOS: linux
+#        GOARCH: amd64
+#      args:
+#        creates: "{{ project_dir }}/bin/mushApi" # TODO: ok?
+#
+#    - name: Ensure UID and GID are set for Docker Compose
+#      ansible.builtin.shell: |
+#        export MY_UID=$(id -u)
+#        export MY_GID=$(id -g)
+#
+#    - name: Ensure Docker Compose project is running
+#      community.docker.docker_compose_v2:
+#        project_src: "{{ project_dir }}"
+#        env-file: "{{ project_dir }}/env/.env.prod"
+#        build: always
+#        recreate: always
+#        state: present

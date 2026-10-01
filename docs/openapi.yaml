@@ -1,0 +1,1146 @@
+"openapi": "3.2.1"
+info:
+  "title": "MushDb API"
+  "version": "1.0.0" # TODO: ensure ok
+  paths:
+    /{path}:
+      summary: "Catch-all route for MushDb API which routes to the next webServer"
+      get:
+        summary: "Catch-all get route for MushDb API which routes to the next webServer"
+      post:
+        summary: "Catch-all post route for MushDb API which routes to the next webServer"
+      options: # TODO: this!
+    /_next/{path}:
+      summary: "Catch-all route for MushDb API which routes to the next webServer"
+      get:
+        summary: "Catch-all get route for MushDb API which routes to the next webServer"
+      post:
+        summary: "Catch-all post route for MushDb API which routes to the next webServer"
+      options: # TODO: this!
+    /import/{variant}:
+      get:
+        summary: "Page to import data into the DB"
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+              type: string
+              $ref: "#/components/schemas/ImportVariant"
+        responses: # TODO: this!
+          200:
+            description: "Switching Protocols. The connection is successfully upgraded to a WebSocket tunnel."
+          '500':
+            description: "Internal server error."
+      options: # TODO: this!
+    /new/{variant}:
+      get:
+        summary: "Page to create a new entry in the DB"
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/CreateVariant"
+        responses: # TODO: this!
+          200:
+            description: "Succeeded"
+          '500':
+            description: "Internal server error."
+      options: # TODO: this!
+    /list/{variant}:
+      get:
+        summary: "Page to list entries of a specific type"
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/EntryType"
+        responses: # TODO: this!
+          200:
+            description: "Succeeded"
+          '500':
+            description: "Internal server error."
+      options: # TODO: this!
+    /view/{variant}/{id}:
+      get:
+        summary: "Page to view a new entry in the DB"
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/EntryType"
+          - name: id
+            description: "The ID of the entry to view"
+            in: path
+            required: true
+            schema:
+            oneOf: # TODO: FIX!
+              - $ref: "#/components/schemas/Base58MainCollectionId"
+              - $ref: "#/components/schemas/Base58AlternateCollectionId"
+              - $ref: "#/components/schemas/AlternateCollectionStringId"
+              - string
+        responses: # TODO: this!
+          200:
+            description: "Succeeded"
+          '500':
+            description: "Internal server error."
+      options: # TODO: this!
+    /error/{errTxt}:
+      get:
+        summary: Page for errors
+        parameters:
+          - name: errTxt
+            in: path
+            required: false
+            schema:
+            type: string
+            description: Error text to be displayed on the error page
+        responses: # TODO: this!
+          200:
+            description: "Succeeded"
+          '500':
+            description: "Internal server error."
+      options: # TODO: this!
+    /whitelistUser:
+      summary: admin endpoint for whitelisting users to create their accounts
+      get: # TODO: this!
+      post: # TODO: this!
+      options: # TODO: this!
+    # TODO: sensorData endpoints
+    /db: # TODO: anything?
+    /db/pathFor/{id}:
+      get:
+        summary: Get the path for a given entry ID
+        parameters:
+          - name: id
+            in: path
+            required: true
+            schema:
+              type: string
+        responses:
+          '200':
+            description: "Successfully retrieved the path."
+            content:
+              application/json: # TODO: ok?
+                schema:
+                  type: string
+                  description: "The path corresponding to the given entry ID."
+          # TODO: unauthed?
+          '404':
+            description: "Entry ID not found."
+          '500':
+            description: "Internal server error."
+      options: # TODO: this
+    /db/get/{variant}/{id}:
+      get:
+        summary: Get the entry data for a given variant and ID
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/EntryType"
+          - name: id
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/Base58Id" # TODO: fix for possibly different types like main, alt, or string
+        responses:
+          '200':
+            description: "Successfully retrieved the entry data."
+            content:
+            application/json:
+              schema:
+              type: object # TODO: define schema for entry data
+          # TODO: unauthed?
+          '404':
+            description: "Entry not found."
+        '500':
+          description: "Internal server error."
+      options: # TODO: this
+    /db/images/{imageSubPath}:
+      get:
+        summary: Get an image from the database
+        parameters:
+          - name: imageSubPath
+            in: path
+            required: true
+            schema:
+            type: string
+            description: "The sub-path of the image in the database."
+        responses:
+          '200':
+            description: "Successfully retrieved the image."
+            content:
+            image/png: # TODO: ensure ok!
+              schema:
+              type: string
+              format: binary
+          # TODO: unauthed?
+          '404':
+            description: "Image not found."
+          '500':
+            description: "Internal server error."
+      options: # TODO: this
+    /db/create/{variant}:
+      post:
+        summary: Create a new entry in the database
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/CreateVariant"
+        requestBody: # TODO: FIX THIS!
+          required: true
+          content:
+            application/json:
+            schema:
+              type: object # TODO: define schema for entry creation data
+        responses:
+          '200':
+            description: "Successfully created the entry."
+            content:
+            application/json:
+              schema:
+                type: object # TODO: define schema for created entry response
+          # TODO: unauthed?
+          '400':
+            description: "Bad request. Invalid input data."
+          '500':
+            description: "Internal server error."
+        options: # TODO: this
+      /db/update/{variant}/{id}:
+        post:
+          summary: Update an entry in the database
+          parameters:
+            - name: variant
+              in: path
+              required: true
+              schema:
+              type: string
+              $ref: "#/components/schemas/UpdateVariant"
+            - name: id
+              in: path
+              required: true
+              schema:
+              type: string
+              $ref: "#/components/schemas/entryId" # TODO: FIX
+          requestBody: # TODO: FIX THIS!
+            required: true
+            content:
+              application/json:
+              schema:
+                type: object # TODO: define schema for entry creation data
+          responses:
+            '200':
+              description: "Successfully created the entry."
+              content:
+              application/json:
+                schema:
+                type: object # TODO: define schema for created entry response
+          # TODO: unauthed?
+          '400':
+            description: "Bad request. Invalid input data."
+          '500':
+            description: "Internal server error."
+        options: # TODO: this
+      /db/import/{variant}:
+        post:
+          summary: Update an entry in the database
+          parameters:
+            - name: variant
+              in: path
+              required: true
+              schema:
+              type: string
+              $ref: "#/components/schemas/UpdateVariant"
+          requestBody: # TODO: FIX THIS!
+            required: true
+            content:
+              application/json:
+              schema:
+                type: object # TODO: define schema for entry creation data
+          responses:
+            '200':
+              description: "Successfully imported the entry."
+              content:
+              application/json:
+                schema:
+                type: object # TODO: define schema for created entry response
+          # TODO: unauthed?
+          '400':
+            description: "Bad request. Invalid input data."
+          '500':
+            description: "Internal server error."
+        options: # TODO: this
+    /db/list/{variant}:
+      get:
+        summary: List entries of a specific variant
+        parameters:
+          - name: variant
+            in: path
+            required: true
+            schema:
+            type: string
+            $ref: "#/components/schemas/EntryType"
+          # TODO: headers and more!
+        responses: # TODO; Fix!
+          '200':
+            description: "Successfully imported the entry."
+            content:
+            application/json:
+              schema:
+              type: object # TODO: define schema for created entry response
+      options: # TODO: this!
+    /db/subspeciesFor/{species}:
+      get:
+        summary: get list of subspecies for a species
+        parameters:
+          - name: species
+            in: path
+            required: true
+            schema:
+            type: string
+            # TODO: example? description?
+          # TODO: headers and more!
+        responses: # TODO; Fix!
+          '200':
+            description: "Successfully imported the entry."
+            content:
+            application/json:
+              schema:
+              type: object # TODO: array of subspecies?
+      options: # TODO: this!
+    /sessionUserProjects:
+      get: # TODO: this!
+      options: # TODO: this!
+    /db/get/rfid/{id}:
+      get: # TODO: this!
+      options: # TODO: this!
+    /options/{optionsType}:
+      get:
+        summary: get different types of options for things such as grain types, sugars, woods, etc.
+        parameters:
+          - name: optionsType
+            in: path
+            required: true
+            schema:
+            type: string
+            enum: [
+              "additives","additive",
+              "antibiotics","antibiotic",
+              "bagFilterSizes",
+              "colors","color","colorants","colorant",
+              "grains","grain"
+              "liquids","liquid","fluids","fluid",
+              "nutrients","nutrient",
+              "sporePrintColors","sporePrintColor",
+              "sporePrintDensities","sporePrintDensity",
+              "sugars","sugar",
+              "transferReasons","transferReason",
+              "woods","wood",
+            ]
+            # TODO: example? description?
+          # TODO: any more?
+          # TODO: headers and more!
+        responses: # TODO; Fix!
+          '200':
+            description: "Success, returned options."
+            content:
+            application/json:
+              schema:
+              type: object # TODO: ???
+      options: # TODO: this
+    /rfid/ws: # TODO: this
+      get:
+        summary: Rfid Reader WebSocket Connection Handshake
+        description: Initiates a persistent bi-directional connection. Uses standard WebSocket upgrade headers.
+        parameters:
+          - name: Connection
+            in: header
+            required: true
+            schema:
+              type: string
+              enum:
+                - "upgrade"
+          - name: Sec-Websocket-Version
+            in: header
+            required: true
+            schema:
+              type: string
+              enum:
+                - "13"
+          - name: Upgrade
+            in: header
+            required: true
+            schema:
+              type: string
+              enum:
+                - "websocket"
+        responses:
+          '101':
+            description: "Switching Protocols. The connection is successfully upgraded to a WebSocket tunnel."
+          '400':
+            description: "Request is malformed or missing required headers, or Sec-WebSocket-Key header is invalid."
+          '403':
+            description: "Forbidden.  request origin not allowed by Upgrader.CheckOrigin"
+          '405':
+            description: "Unsupported websocket version. The server only supports version 13."
+          '500':
+            description: "Internal server error."
+    /rfid/read/{readerName}: # TODO: this
+      get:
+        summary: Read RFID Tag
+        description: Reads an RFID tag from the specified reader.
+        parameters:
+          - name: readerName
+            in: path
+            required: true
+            schema:
+              type: string
+          - name: Content-Type
+            in: header
+            required: true
+            schema:
+              type: string
+              enum:
+                - "text/html"
+          - name: Accept
+            in: header
+            required: true
+            schema:
+              type: string
+              enum:
+                - "text/html"
+        responses: # TODO: ensure all ok
+          '200':
+            description: "Successfully read RFID tag."
+            content:
+              text/html:
+                schema:
+                  $ref: "#/components/schemas/Base58Id"
+          '401':
+            description: "Unauthorized"
+          '403':
+            description: "Forbidden"
+          '404':
+            description: "Reader not found."
+          '500':
+            description: "Internal server error."
+    /rfid/write/{readerName}: # TODO: this
+    /rfid/readers: # TODO: this
+    /rfid/clear/{writerName}: # TODO: this
+    /login:
+      get: # TODO: this
+      post: # TODO: this
+    /logout:
+      get: # TODO: this
+    /guestLogin:
+      post: # TODO: this
+    /isLoggedIn:
+      get: # TODO: this
+    /auth/{provider}:
+      get: # TODO: this
+    /auth/{provider}/callback:
+      get: # TODO: this, unsure if exists
+      delete: # TODO: this, unsure if exists
+      patch: # TODO: this, unsure if exists
+      post: # TODO: this, unsure if exists
+      put: # TODO: this, unsure if exists
+      query: # TODO: this, unsure if exists
+    # TODO: biometrics endpoints if enabled
+    /EXAMPLE-MULTIPART-REQUEST:
+      post:
+        summary: Upload a profile with an avatar image
+        operationId: uploadProfile
+        requestBody:
+          required: true
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+#                additionalProperties: # TODO: optional image fields!
+#                  type: string
+#                  format: binary
+#                  description: The avatar profile image file to upload. FileName should be \"img\"
+                properties:
+                  # 1. Text Field
+                  data:
+                    type: object
+                    description: The core json data for the request
+                    # example: "johndoe"
+
+                  # 2. File Field (required image)
+                  image: # name on formData
+                    type: string
+                    format: binary
+                    description: The avatar profile image file to upload. FileName should be \"img\"
+                    # TODO: "img" or ("newPic/newContam/newFlush" + "-" + i)
+                    # TODO: fromImage or toImage for transfers?
+                required:
+                  - data
+        responses:
+          '200':
+            description: Profile uploaded successfully.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+
+components:
+  schemas:
+    Acl:
+      type: object
+      description: "Access Control List"
+      properties:
+        users:
+          description: "Optional map of user ids with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the user can write or not"
+        projects:
+          description: "Optional map of project names with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the project can write or not"
+        blanketPerm:
+          type: boolean
+          description: "What every user can do (excluding guests for writes, but including them for reads). True is write, false is read, and missing is no access."
+    AclField:
+        type: object
+        description: "Access Control List Field"
+        required:
+          - "acl"
+        properties:
+          acl:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AdditivesField: # TODO: this
+    AgarRecipeField:
+        type: object
+        description: "Represents the id of an agar recipe."
+        required:
+          - "agarRecipe"
+        properties:
+          agarRecipe:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AllEntries:
+      type: object
+      properties:
+        existing:
+          type: array
+          items:
+            $dynamicRef: '#allEntries'
+        new:
+          type: array
+          items:
+            $dynamicRef: '#allEntries'
+    AlternateCollectionIdField:
+        type: object
+        description: "Represents an alternate collection ID field in the main DB."
+        required:
+          - "_id"
+        properties:
+          _id:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    AntibioticsField: # TODO: this
+    ContaminationsField: # TODO: this
+    ContamsUpdateField: # TODO: this!
+    CreationDateField:
+        type: object
+        description: "Represents a creation date timestamp of an entry."
+        required:
+          - "creationDate"
+        properties:
+          creationDate:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    DisposedField:
+      type: object
+      description: "Represents when an entry was disposed."
+      properties:
+        disposed:
+          $ref: '#/components/schemas/UnixTimestampMs'
+    FlushesField: # TODO: this
+    FlushesUpdateField: # TODO: this
+    GenerationsFields:
+      allOf:
+        - $ref: '#/components/schemas/GenSporeField'
+        - type: object
+          properties:
+            genFruitOrSpore:
+              $ref: '#/components/schemas/GenFruitOrSpore'
+    GenSpore:
+      type: integer
+      description: "The generations since spore"
+      $ref: '#/components/schemas/Generation'
+      # TODO: never less than 0
+    GenSporeField:
+      type: object
+      description: "The generations since spore, but a field in an object"
+      properties:
+        genSpore:
+          $ref: '#/components/schemas/GenSpore'
+    Generation:
+      type: integer
+      description: "Parents since something"
+      # TODO: never less than 0
+    GenFruitOrSpore:
+        type: integer
+        description: "The generations since fruit or spore"
+        $ref: '#/components/schemas/Generation'
+    GrainWaterJarsField:
+        type: object
+        description: "An optional list of grainwater jar ids"
+        properties:
+          grainWaterJars: # TODO: optional always or no?
+            type: array
+            items:
+              $ref: '#/components/schemas/Base58AlternateCollectionId'
+    GrainWaterJarsDisposableField:
+      allOf: # TODO: ensure length matches!
+        - $ref: '#/components/schemas/GrainWaterJarsField'
+        - type: array
+          description: "An array of bool where true dictates which jars to dispose"
+          items:
+            type: boolean
+    InnocField: # TODO: this!
+    ImagesUpdateField: # TODO: this!
+    KnownFruitableField:
+        type: object
+        description: "Represents a known fruitable boolean field of an entry. Unknown is nil"
+        properties:
+          knownFruitable:
+            type: boolean
+            description: "Whether the entry is known to be fruitable or not."
+    LastUpdatedField:
+        type: object
+        description: "Represents a last updated timestamp of an entry."
+        required:
+          - "lastUpdated"
+        properties:
+          lastUpdated:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    LiquidsField: # TODO: this!
+    MainCollectionIdField:
+        type: object
+        description: "Represents a main collection ID field in the main DB."
+        required:
+          - "_id"
+        properties:
+          _id:
+            $ref: '#/components/schemas/Base58MainCollectionId'
+    MainCollectionOptionalParentField: # TODO: this!
+    MostRecentImageField: # TODO: this
+    NameField: # TODO: this!
+    Note:
+      allOf:
+        - $ref: '#/components/schemas/RequiredTimeField'
+        - type: object
+          properties:
+            note:
+              type: string
+              description: "Text content of the note"
+    NotesField:
+        type: object
+        description: "A group of notes"
+        properties:
+          notes:
+            $dynamicAnchor: allEntries
+            $ref: '#/components/schemas/AllEntries'
+    NotesUpdateField:
+      type: object
+      description: "Note updates"
+      required:
+        - "notes"
+      properties:
+        notes:
+          type: object
+          schema:
+            existing:
+              type: array
+              items:
+                $ref: '#/components/schemas/Note'
+            new:
+              type: array
+              items:
+                $ref: '#/components/schemas/Note'
+    NutrientsField: # TODO: this
+    ParentTypeField: # TODO: this
+    PcRunField:
+        type: object
+        description: "Represents a main collection ID field in the main DB."
+        required:
+          - "pcRun"
+        properties:
+          pcRun:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    PicsField: # TODO: this
+    PicWithNotes:
+      allOf:
+        - $ref: '#/components/schemas/PicWithNotesLessLocation'
+        - type: object
+          required:
+            - "location"
+          properties:
+            location:
+              type: string
+              description: "Location of the picture"
+    PicWithNotesLessLocation:
+        allOf:
+            - $ref: '#/components/schemas/RequiredTimeField'
+            - $ref: '#/components/schemas/NotesField'
+    permsOnRequestInternal:
+      type: object
+      description: "Access Control List used on requests, not responses"
+      properties:
+        users:
+          description: "Optional map of user ids with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the user can write or not"
+        projects:
+          description: "Optional map of project names with their access levels"
+          type: object
+          additionalProperties:
+            type: boolean
+            description: "if the project can write or not"
+        blanketPerm:
+          type: boolean
+          description: "What every user can do (excluding guests for writes, but including them for reads). True is write, false is read, and missing is no access."
+    PermsOnRequest:
+      type: object
+      description: "Permissions on a request"
+      required:
+        - "acl"
+      properties:
+        acl:
+          $ref: '#/components/schemas/permsOnRequestInternal'
+    RequiredTimeField:
+        type: object
+        description: "UnixTimeStampMs"
+        required:
+          - "time"
+        properties:
+          time:
+            $ref: '#/components/schemas/UnixTimestampMs'
+    SaleField: # TODO: this!
+    SpeciesField: # TODO; this!
+    SpeciesOptionalField: # TODO; this!
+    SubspeciesField: # TODO; this!
+    SubspeciesOptionalField: # TODO; this!
+    StandardField: # TODO: this
+    SubstrateBatchOptionalField:
+        type: object
+        description: "Represents the id of a substrate batch."
+        properties:
+          substrateBatch:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    SubstrateRecipeField:
+        type: object
+        description: "Represents the id of a substrate recipe."
+        required:
+          - "recipe"
+        properties:
+          recipe:
+            $ref: '#/components/schemas/Base58AlternateCollectionId'
+    SugarsField: # TODO: this
+    TransfersOutField: # TODO: this!
+    UnixTimestampMs:
+        type: number
+        description: "Unix timestamp in milliseconds."
+    WetnessField:
+      type: object
+      description: "WetnessField contains an optional int 0-10. 5 is perfect, 0 is dry, 10 is soaked"
+      properties:
+        wetness:
+          type: number
+          format: float
+          description: "WetnessField contains an int 0-10. 5 is perfect, 0 is dry, 10 is soaked."
+    WriteTagToField:
+        type: object
+        description: "WriteTagToField contains an optional string of the reader/writer to write the result id to"
+        properties:
+          writeTagTo:
+            type: string
+            description: "The rfid reader/writer name"
+#    User:
+#      type: object
+#      description: A user entity from the database.
+#      required:
+#        - id
+#        - name
+#        - isActive
+#      properties:
+#        id:
+#          type: integer
+#          format: int64
+#          description: Unique identifier for the user.
+#        name:
+#          type: string
+#          example: Jane Doe
+#        isActive:
+#          type: boolean
+#          description: Indicates whether the user account is active.
+#
+    entryId:
+      description: "ID of an entry, which will either be a Base58 main/alt ID, or a string id"
+      # TODO: this!
+    EntryType:
+      description: "Represents an entryType in the main DB."
+      anyOf:
+        - $ref: '#/components/schemas/ImportVariant'
+        - $ref: '#/components/schemas/CreateVariant'
+        - $ref: '#/components/schemas/ViewVariant'
+
+    ImportVariant:
+      description: "Represents an entryType that can be imported."
+      type: string
+      enum:
+        - "bag"
+        - "fruit"
+        - "fruitingChamber"
+        - "grainWaterJar"
+        - "jar"
+        - "lc"
+        - "lcSyringe"
+        - "mss"
+        - "plate"
+        - "plugs"
+        - "slant"
+        - "sporePrint"
+        - "sporeSwab"
+        - "stasisTube"
+        - "waterJar"
+    CreateVariant:
+      description: "Represents an entryType that can be imported."
+      type: string
+      enum:
+        - "agarBatch"
+        - "agarRecipe"
+        - "bag"
+        - "lc"
+        - "lcSyringe"
+        - "lcRecipe"
+        - "fruit"
+        - "fruitingChamber"
+        - "grainBatch"
+        - "grainWaterJar"
+        - "jar"
+        - "mss"
+        - "pcRun"
+        - "plate"
+        - "plugs"
+        - "project"
+        - "sale"
+        - "slant"
+        - "species"
+        - "sporePrint"
+        - "sporeSwab"
+        - "stasisTube"
+        - "subspecies"
+        - "substrateRecipe"
+        - "substrateBatch"
+        - "transfer"
+        - "waterJar"
+    ViewVariant:
+      description: "Represents an entryType that can be imported."
+      type: string
+      enum:
+        - "bag"
+        - "fruit"
+        - "fruitingChamber"
+        - "grainWaterJar"
+        - "jar"
+        - "lc"
+        - "lcSyringe"
+        - "mss"
+        - "plate"
+        - "plugs"
+        - "slant"
+        - "sporePrint"
+        - "sporeSwab"
+        - "stasisTube"
+        - "waterJar"
+    UpdateVariant:
+      description: "Represents an entryType that can be imported."
+      schema:
+        $ref: '#/components/schemas/EntryType' # TODO: ensure ok
+    Base2Id:
+      description: "Represents the base-2 bytes of an RFID tag."
+      type: string
+    Base58Id:
+      description: "Represents the base-58 bytes of an RFID tag."
+      type: string
+      example: "SampleRfidTagDataHereTODO" # TODO: replace
+    Base58MainCollectionId:
+      description: "Represents the base-58 bytes of an RFID tag."
+      type: string
+      example: "SampleRfidTagDataHereTODO" # TODO: replace
+    Base58AlternateCollectionId:
+      description: "Represents the base-58 bytes of an RFID tag."
+      type: string
+      example: "SampleRfidTagDataHereTODO" # TODO: replace
+    AlternateCollectionStringId:
+      description: "Represents the base-58 bytes of an RFID tag."
+      type: string
+      example: "SampleRfidTagDataHereTODO" # TODO: replace
+    AgarBatch:
+      description: "Represents an agar batch in the main DB."
+      allOf:
+        - $ref: '#/components/schemas/AlternateCollectionIdField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/AgarRecipeField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+        - $ref: '#/components/schemas/GrainWaterJarsField'
+        - type: object
+          required:
+            - "color"
+          properties:
+            color:
+              type: string
+              description: "The color of the agar batch"
+    CreateAgarBatchRequest:
+      description: "Request to create an agar batch"
+      allOf:
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/AgarRecipeField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/GrainWaterJarsDisposableField'
+        - type: object
+          required:
+            - "color"
+          properties:
+            color:
+              type: string
+              description: "The color of the agar batch"
+    UpdateAgarBatchRequest:
+      description: "Request to update an agar batch"
+      allOf:
+        - $ref: '#/components/schemas/PermsOnRequest'
+        - $ref: '#/components/schemas/NotesUpdateField'
+    AgarRecipe:
+      description: "Represents an agar recipe from the main DB."
+      allOf:
+        - $ref: '#/components/schemas/AlternateCollectionIdField'
+        - $ref: '#/components/schemas/CreateAgarRecipeRequest'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+    CreateAgarRecipeRequest:
+      description: "Request to create an agar recipe"
+      allOf:
+        - $ref: '#/components/schemas/NameField'
+        - type: object
+          required:
+            - "agar"
+          properties:
+            agar:
+              type: integer
+              description: "Grams of agar per liter of liquid"
+        - $ref: '#/components/schemas/LiquidsField'
+        - $ref: '#/components/schemas/StandardField'
+        - $ref: '#/components/schemas/NutrientsField'
+        - $ref: '#/components/schemas/SugarsField'
+        - $ref: '#/components/schemas/AdditivesField'
+        - $ref: '#/components/schemas/AntibioticsField'
+        - $ref: '#/components/schemas/NotesField'
+#        - $ref: '#/components/schemas/AclField' # TODO: or no? default?
+    UpdateAgarRecipeRequest:
+      description: "Request to update an agar recipe"
+      allOf:
+        - $ref: '#/components/schemas/NameField'
+        - $ref: '#/components/schemas/StandardField'
+        - $ref: '#/components/schemas/NotesUpdateField'
+        - $ref: '#/components/schemas/PermsOnRequest'
+    Bag:
+      description: "A Bag entry"
+      allOf:
+        - $ref: '#/components/schemas/MainCollectionIdField'
+        - $ref: '#/components/schemas/SubstrateRecipeField'
+        - $ref: '#/components/schemas/SubstrateBatchOptionalField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/CreationDateField'
+        - $ref: '#/components/schemas/GenerationsFields'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/SpeciesOptionalField'
+        - $ref: '#/components/schemas/SubspeciesOptionalField'
+        - $ref: '#/components/schemas/InnocField'
+        - $ref: '#/components/schemas/TransfersOutField'
+        - $ref: '#/components/schemas/MainCollectionOptionalParentField'
+        - $ref: '#/components/schemas/ParentTypeField'
+        - $ref: '#/components/schemas/PicsField'
+        - $ref: '#/components/schemas/ContaminationsField'
+        - $ref: '#/components/schemas/MostRecentImageField'
+        - $ref: '#/components/schemas/FlushesField'
+        - $ref: '#/components/schemas/SaleField'
+        - $ref: '#/components/schemas/DisposedField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/LastUpdatedField'
+        - $ref: '#/components/schemas/AclField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+            sealDate:
+              description: "Date the bag was sealed"
+              $ref: '#/components/schemas/UnixTimestampMs'
+    CreateBagRequestData:
+      description: "Request to create a Bag"
+      allOf:
+        - $ref: '#/components/schemas/SubstrateBatchField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/PcRunField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/WriteTagToField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+    ImportBagRequestData: # TODO; does not cover actual images, need to create request for that...
+      allOf:
+        - $ref: '#/components/schemas/CreationDateField'
+        - $ref: '#/components/schemas/SubstrateRecipeField'
+        - $ref: '#/components/schemas/SpeciesOptionalField'
+        - $ref: '#/components/schemas/SubspeciesOptionalField'
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/NotesField'
+        - $ref: '#/components/schemas/WriteTagToField'
+        - type: object
+          required:
+            - "filterSize"
+          properties:
+            filterSize:
+              type: string
+              description: "Size of the filter on the bag" # TODO: fix
+            generation:
+              $ref: '#/components/schemas/Generation'
+    UpdateBagRequestData:
+      allOf:
+        - $ref: '#/components/schemas/KnownFruitableField'
+        - $ref: '#/components/schemas/DisposedField'
+        - $ref: '#/components/schemas/WetnessField'
+        - $ref: '#/components/schemas/NotesUpdateField'
+        - $ref: '#/components/schemas/ImagesUpdateField' # "newPic-1"
+        - $ref: '#/components/schemas/ContamsUpdateField' # "newContam-1"
+        - $ref: '#/components/schemas/FlushesUpdateField' # "newFlush-1"
+        - $ref: '#/components/schemas/PermsOnRequest'
+    Fruit: # TODO: this!
+    CreateFruitRequestData: # TODO: this!
+    ImportFruitRequestData: # TODO: this!
+    UpdateFruitRequestData: # TODO: this!
+    FruitingChamber: # TODO: this!
+    CreateFruitingChamberRequestData: # TODO: this!
+    ImportFruitingChamberRequestData: # TODO: this!
+    UpdateFruitingChamberRequestData: # TODO: this!
+    GrainBatch: # TODO: this!
+    CreateGrainBatchRequest: # TODO: this!
+    UpdateGrainBatchRequest: # TODO: this!
+    GrainJar: # TODO: this!
+    CreateGrainJarRequestData: # TODO: this!
+    ImportGrainJarRequestData: # TODO: this!
+    UpdateGrainJarRequestData: # TODO: this!
+    GrainWaterJar: # TODO: this!
+    CreateGrainWaterJarRequestData: # TODO: this!
+    ImportGrainWaterJarRequestData: # TODO: this!
+    UpdateGrainWaterJarRequestData: # TODO: this!
+    JarRecipe: # TODO: this!
+    CreateJarRecipeRequest: # TODO: this!
+    UpdateJarRecipeRequest: # TODO: this!
+    LiquidCulture: # TODO: this!
+    CreateLiquidCultureRequestData: # TODO: this!
+    ImportLiquidCultureRequestData: # TODO: this!
+    UpdateLiquidCultureRequestData: # TODO: this!
+    LcRecipe: # TODO: this!
+    CreateLcRecipeRequest: # TODO: this!
+    UpdateLcRecipeRequest: # TODO: this!
+    # TODO: USE DISCRIMINATOR FOR DIFFERENT TYPES OF REQUESTS AND RESPONSES!
+    LcSyringe: # TODO: this!
+    CreateLcSyringeRequestData: # TODO: this!
+    ImportLcSyringeRequestData: # TODO: this!
+    UpdateLcSyringeRequestData: # TODO: this!
+    MSS: # TODO: this!
+    CreateMSSRequestData: # TODO: this!
+    ImportMSSRequestData: # TODO: this!
+    UpdateMSSRequestData: # TODO: this!
+    PcRun: # TODO: this!
+    CreatePcRunRequest: # TODO: this!
+    UpdatePcRunRequest: # TODO: this!
+    Plate: # TODO: this!
+    CreatePlateRequestData: # TODO: this
+    ImportPlateRequestData: # TODO: this
+    UpdatePlateRequestData: # TODO: this
+    Plugs: # TODO: this!
+    CreatePlugsRequestData: # TODO: this!
+    ImportPlugsRequestData: # TODO: this!
+    UpdatePlugsRequestData: # TODO: this!
+    Project: # TODO: this!
+    CreateProjectRequest: # TODO: this!
+    UpdateProjectRequest: # TODO: this!
+    Sale: # TODO: this!
+    CreateSaleRequest: # TODO: this!
+    UpdateSaleRequest: # TODO: this!
+    Slant: # TODO: this!
+    CreateSlantRequestData: # TODO: this!
+    ImportSlantRequestData: # TODO: this!
+    UpdateSlantRequestData: # TODO: this!
+    Species: # TODO: this!
+    CreateSpeciesRequest: # TODO: this!
+    UpdateSpeciesRequest: # TODO: this!
+    SporePrint: # TODO: this!
+    CreateSporePrintRequestData: # TODO: this!
+    ImportSporePrintRequestData: # TODO: this!
+    UpdateSporePrintRequestData: # TODO: this!
+    SporeSwab: # TODO: this!
+    CreateSporeSwabRequestData: # TODO: this!
+    ImportSporeSwabRequestData: # TODO: this!
+    UpdateSporeSwabRequestData: # TODO: this!
+    StasisTube: # TODO: this!
+    CreateStasisTubeRequestData: # TODO: this!
+    ImportStasisTubeRequestData: # TODO: this!
+    UpdateStasisTubeRequestData: # TODO: this!
+    Subspecies: # TODO: this!
+    CreateSubspeciesRequest: # TODO: this!
+    UpdateSubspeciesRequest: # TODO: this!
+    SubstrateBatch: # TODO: this!
+    CreateSubstrateBatchRequest: # TODO: this!
+    UpdateSubstrateBatchRequest: # TODO: this!
+    SubstrateRecipe: # TODO: this!
+    CreateSubstrateRecipeRequest: # TODO: this!
+    UpdateSubstrateRecipeRequest: # TODO: this!
+    Transfer: # TODO: this!
+    CreateTransferRequestData: # TODO: this!
+    UpdateTransferRequestData: # TODO: this!
+    User: # TODO: this!
+    CreateUserRequest: # TODO: this!
+    UpdateUserRequest: # TODO: this!
+    WaterJar: # TODO: this!
+    CreateWaterJarRequestData: # TODO: this!
+    ImportWaterJarRequestData: # TODO: this!
+    UpdateWaterJarRequestData: # TODO: this!
+
+
+

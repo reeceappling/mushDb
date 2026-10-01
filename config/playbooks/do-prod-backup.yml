@@ -1,0 +1,8 @@
+- name: Shutdown production containers and services
+  ansible.builtin.import_playbook: shutdown-prod.yml
+
+- name: Backup production data
+  ansible.builtin.import_playbook: prod-backup.yml
+
+- name: Restart production containers and services
+  ansible.builtin.import_playbook: start-prod.yml

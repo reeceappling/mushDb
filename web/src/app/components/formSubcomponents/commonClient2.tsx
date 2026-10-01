@@ -2,41 +2,56 @@ import {NewPicWithNotesForm, PicWithNotesIncoming} from "@/app/components/formSu
 import {useEffect, useState} from "react";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import {Note, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 
-export function PixRows(
-    {initial, updateParent}: {
+function picRowsKey(items: PicWithNotesIncoming[]): string {
+    return items.map((p) =>
+        [
+            p.time,
+            p.location || "",
+            (p.notes || []).map((n) => `${n.time}:${n.note}`).join("^"),
+        ].join("|")
+    ).join("||");
+}
+
+export function PixRows( // For Rows of new pictures (not preexisting)
+    {initial, updateParent, addButtonText}: {
         initial: PicWithNotesIncoming[],
         updateParent?: (d: NewPicWithNotesForm[]) => void,
+        addButtonText?: string,
     }) {
     const [current, setCurrent] = useState<Data<NewPicWithNotesForm>[]>([])
+    const initialKey = picRowsKey(initial);
+
     useEffect(() => {
-        setCurrent([])  // Reset when initial changes
-    }, [initial])
+        setCurrent([]); // Reset only when pic content actually changes
+    }, [initialKey]);
     const doUpdate = (updated: Data<NewPicWithNotesForm>[]) => {
         setCurrent(updated)
         updateParent && updateParent(updated.filter(e => {
-            const hasImgOrNotes = e.data.img !== undefined || e.data.notes.new.length > 0
+            const hasImgOrNotes = (e.data.img !== undefined) || (e.data.notes.new.length > 0)
             return !e.disabled && hasImgOrNotes
         }).map(e => e.data))
     }
     return <>
         <div className={"picsGroup picsRows"}>
             {current.map((v, i) => {
-                return <PixRowNew remv={() => {
-                    let upd = structuredClone(current)
+                return <PixRowNew key={i} remv={() => {
+                    const upd = structuredClone(current)
                     upd[i].disabled = true
                     doUpdate(upd)
                 }} updateParent={(u) => {
-                    let upd = structuredClone(current)
+                    const upd = structuredClone(current)
                     upd[i].data = u
                     doUpdate(upd)
                 }}/>
             })}
         </div>
-        <div className={"centerH gapTop"}>
+        <div className={"centerH gapTop picsRowsAdd"}>
             <button className={"greenButton"} onClick={(e) => {
+                console.log("adding a picture")
+                e.preventDefault();
                 e.stopPropagation();
                 const upd = [...structuredClone(current), {
                     data: {
@@ -47,7 +62,7 @@ export function PixRows(
                     disabled: false
                 }]
                 doUpdate(upd)
-            }}>{"Add picture"}</button>
+            }}>{addButtonText || "Add picture"}</button>
         </div>
     </>
 }
@@ -70,21 +85,22 @@ export function PixRowNew(
         return <div className={"picLeft"}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
             <ImageSelector updateParent={f => {
-                let upd = structuredClone(current)
+                const upd = structuredClone(current)
                 upd.img = f
                 updateRow(upd)
             }}/>
-            <button className={"removeButton"} onClick={remv}>{"REMOVE THIS Entry"}</button>
+            <button className={"removeButton"} onClick={remv}>{"Remove This Entry"}</button>
         </div>
     }
     const rightArea = () => {
         return <div className={"picRight"}>
             <DateArea readonly={true} when={current.time}/>
-            <NotesFormArea readonly={false} initial={[]} updateParent={(nts: AllEntries<Note>) => {
-                let updated = structuredClone(current)
-                updated.notes = nts
-                updateRow(updated)
-            }} removeHeader={true}/>
+            <NotesFormAreaPics readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
+                updateParent={(nts: AllEntries<Note>) => {
+                    const updated = structuredClone(current)
+                    updated.notes = nts
+                    updateRow(updated)
+                }} removeHeader={true}/>
         </div>
     }
     return <div className={"contentsOnly picRow"}>

@@ -1,4 +1,4 @@
-import {ChangeEvent} from "react";
+import {ChangeEvent, useEffect, useState} from "react";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {useQuery} from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
+import { RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 
 export interface Sugar {
@@ -14,9 +14,6 @@ export interface Sugar {
     amount: number,
     unit: string,
 }
-
-export const SugarsList: string[] = ["dextrose", "honey", "other"]
-
 
 export function IsValidSugar(input: any): boolean {
     return (
@@ -27,12 +24,12 @@ export function IsValidSugar(input: any): boolean {
     )
 }
 
-export function SugarTypeSelectorForNew( // TODO: USE THIS!!!!!
+export function SugarTypeSelectorForNew(
     {current, onSelect, readonly, blacklist}:{
         readonly: boolean,
         current?: string,
         onSelect?: (ab?: string)=>void
-        blacklist?: string[], // TODO: use?
+        blacklist?: string[],
     }){
     if(readonly){
         return <div>{current || "FIXME"}</div>
@@ -55,7 +52,7 @@ export function SugarTypeSelectorForNew( // TODO: USE THIS!!!!!
     } />
 }
 
-export function SugarTypeSelector( // TODO: USE THIS!!!!!
+export function SugarTypeSelector(
     {initial, onSelect, blacklist}: {
         initial?: string,
         onSelect?: (ab?: string) => void,
@@ -74,7 +71,7 @@ export function SugarTypeSelector( // TODO: USE THIS!!!!!
     return <SelectorFor disabled={onSelect === undefined} options={["", ...filteredOptions]} initial={initial || ""}
                         updateParent={(s) => {
                             if (s === "") {
-                                onSelect && onSelect()
+                                onSelect && onSelect(undefined)
                             }
                             onSelect && onSelect(s as string)
                         }
@@ -84,45 +81,82 @@ export function SugarTypeSelector( // TODO: USE THIS!!!!!
 export default function SugarsArea(props: AreaProps<Sugar>) {
     return FormListArea(SugarEntriesGroup)(props)
 }
-
-export function SugarEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Sugar[], updateParent: (l: Sugar[])=>void}){
-    const handleSelect = (v: string) => {
-        let data = [...(currentEntries || []), {type: v, amount: 0, unit: ""}];
-        updateParent(data)
+export function SugarsAreaReadOnly({values}: {values?:Sugar[]}) {
+    if (!values || values.length===0){
+        return null
     }
     return <div>
-        {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-            {currentEntries.map((n,i)=>{
-            return <div key={n.type} className={"contentsOnly"}>
-                <SugarEntryForNew currentValue={n} updateParent={(updated: Sugar) => {
-                    updateParent([...(currentEntries || [])].map((existing) => {
-                        return existing.type !== n.type ? existing : updated
-                    }))
-                }}/>
-                <RemoveButton txt={"Remove"} click={()=>{
-                    updateParent([...(currentEntries || [])].filter((existing) => existing.type !== n.type))
-                }} />
-            </div>
+        {"Sugars: "}
+        {values.map((v, i) => {
+            return <div key={v.type}>{v.type + " - " + v.amount + " " + v.unit}</div>
         })}
+    </div>
+}
+
+export function SugarEntriesGroupForNew({
+                                                initial,
+                                                updateParent,
+                                            }: {
+    initial: Sugar[],
+    updateParent: (l: Sugar[]) => void
+}) {
+    const [current, setCurrent] = useState<Sugar[]>(initial)
+
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial])
+
+    const doUpdate = (upd: Sugar[]) => {
+        setCurrent(upd)
+        updateParent(upd)
+    }
+
+    const handleSelectType = (v: string) => {
+        const data = [...current, { type: v, amount: 1, unit: "g" }]
+        doUpdate(data)
+    }
+
+    return <div>
+        {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n, i) => {
+                return <div key={n.type} className={"contentsOnly"}>
+                    <SugarEntryForNew
+                        initial={n}
+                        updateParent={(updated: Sugar) => {
+                            doUpdate(current.map((existing, idx) => idx === i ? updated : existing))
+                        }}
+                    />
+                    <RemoveButton
+                        txt={"Remove"}
+                        click={() => {
+                            doUpdate(current.filter((_, idx) => idx !== i))
+                        }}
+                    />
+                </div>
+            })}
         </div>}
-        <SugarTypeSelectorForNew onSelect={(val)=>{val && handleSelect(val)}} blacklist={currentEntries.map((v)=>{return v.type})} readonly={false} />
+        <SugarTypeSelectorForNew
+            onSelect={(val) => { if (val) handleSelectType(val) }}
+            blacklist={current.map((v) => v.type)}
+            readonly={false}
+        />
     </div>
 }
 
 // TODO: REMOVAL IS NOT MOVING THE TYPES UP! PROBABLY OVERHAUL
 export function SugarEntriesGroup({initialEntries, preexisting, readonly, updateParent, blacklist}: GroupProps<Sugar>) {
     const handleFormChangeSugarType = (index: number, event: ChangeEvent<HTMLInputElement>) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.type = event.target.value
         updateParent(data)
     }
     const handleSelSugarType = (index: number, newType: string) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.type = newType
         updateParent(data)
     }
     const handleFormChangeAmt = (index: number, amt: number) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.amount = amt
         if (isNaN(data[index].data.amount)) {
             console.log(amt + " could not be parsed to a number in handleFormChangeAmt in SugarEntriesGroup")
@@ -131,26 +165,26 @@ export function SugarEntriesGroup({initialEntries, preexisting, readonly, update
         updateParent(data)
     }
     const handleFormChangeUnit = (index: number, txt: string) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data[index].data.unit = txt
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), {
+        const data = [...(initialEntries || []), {
             data: {type: "NEW SUGAR TYPE", amount: 0.0, unit: 'NEW SUGAR UNIT'},
             disabled: false
         }]
         updateParent(data)
     }
     const removeFields = (index: number) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data.splice(index, 1);
         updateParent(data)
     }
     const disableField = (name: string) => {
-        let data = [...(initialEntries || [])].map((v, i) => {
-            let val = v
+        const data = [...(initialEntries || [])].map((v, i) => {
+            const val = v
             if (val.data.type === name) {
                 val.disabled = !val.disabled
             }
@@ -213,7 +247,7 @@ export function SugarEntriesGroup({initialEntries, preexisting, readonly, update
                         <TextBox label={"Unit"} readonly={readonly} value={input.data.unit} fieldName={"FIXME"}
                                  updateTextHandler={(t) => {
                                      handleFormChangeUnit(index, t)
-                                 }}/>{/* TODO: not working*/}
+                                 }}/>{/* TODO: not working!!!*/} {/*TODO: not working properly!!!!*/}
                         {(!readonly) && <button className={input.disabled?"removeButton":"basicButton"} onClick={() => {
                             (preexisting ? disableField(input.data.type) : removeFields(index))
                         }}>
