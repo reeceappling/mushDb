@@ -36,7 +36,7 @@ func (field AliasesField) updateIfNeeded(existing AliasesField, upd *Mods) *Mods
 }
 
 type AlternateCollectionIdField struct {
-	Id AlternateCollectionId `bson:"_id" json:"_id"`
+	Id AlternateCollectionId `bson:"_id" json:"_id"` // TODO: tstype:"string" used if we use https://github.com/gzuidhof/tygo
 }
 
 func (field AlternateCollectionIdField) DbId() AlternateCollectionId {
@@ -112,7 +112,7 @@ func (field LiquidsField) ContainsGrainWater() bool {
 }
 
 type MainCollectionIdField struct {
-	Id MainCollectionId `bson:"_id" json:"_id"`
+	Id MainCollectionId `bson:"_id" json:"_id"` // TODO: tstype:"string"
 }
 
 func (field MainCollectionIdField) DbId() BinaryCollectionId {
@@ -142,8 +142,10 @@ type MainCollectionParentField struct {
 	Parent MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
 
-func (parent MainCollectionParentField) GetParent(ctx context.Context) (ParentResult, error) {
-	return GetMainCollectionItemWithId(ctx, parent.Parent)
+func (parent MainCollectionParentField) GetParent(ctx context.Context) (out ParentResult, err error) {
+	out.Data, err = GetMainCollectionItemWithId(ctx, parent.Parent)
+	out.EntryType = out.Data.EntryType() // TODO: is this all ok?
+	return out, err
 }
 
 type NameIdField struct {

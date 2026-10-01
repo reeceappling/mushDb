@@ -200,6 +200,12 @@
 - [ ] ensure robots.txt is correct and not allowing indexing of private pages
 - [ ] ensure noindex tags are inserted serverSide (if possible) for private pages
   - [ ] Partially done with view page and doIndex header
+- [ ] AGENTS.md
+  - [ ] Root AGENTS.md
+  - [ ] Go AGENTS.md
+  - [ ] Ts AGENTS.md
+- [ ] ./.agents
+  - [ ] .agents/skills/
 - [ ] SEO
   - [ ] https://seo-cheat-sheet.9elements.com
     - [ ] Responsive site meta tag: <meta name=”viewport” content=”width=device-width, initial-scale=1” />

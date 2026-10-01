@@ -17,6 +17,7 @@ import (
 
 type Species struct {
 	// TODO: HOW TO DO UNCONFIRMED SPECIES AND SUBSPECIES????? "unconfirmed" prefix? or maybe just a separate field on each item that says geneticsConfirmed?
+	// TODO: I kinda want to have unconfirmed species and subspecies be in the species collection, and when confirmed either swap them all over to the correct species, or link to it?
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
 	ScientificName    string `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
