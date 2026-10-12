@@ -697,7 +697,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("failed in multipartToImageBytes") // TODO: del
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "plate", string(b58id), "img")
+		externallyCacheable := false // TODO: fix  Requires finalPerms
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, externallyCacheable, "plate", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			println("failed to save file: " + err.Error()) // TODO: del

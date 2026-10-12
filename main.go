@@ -1437,7 +1437,7 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "image name must not be blank", http.StatusBadRequest)
 		return
 	}
-	bytes, err := picsRfid.GetPic(ctx, imgSubPath)
+	bytes, externallyCacheable, err := picsRfid.GetPic(ctx, imgSubPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			//println("file does not exist!") // TODO: fix
@@ -1447,6 +1447,7 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// TODO: handle externallyCacheable
 	_, err = w.Write(bytes)
 	if err != nil {
 		rfid.HandleHttpWriteError(err)

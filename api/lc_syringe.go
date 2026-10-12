@@ -347,7 +347,8 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			log.Error("failed in multipartToImageBytes")
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "lcSyringe", string(b58id), "img")
+		externallyCacheable := false // TODO: fix
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, externallyCacheable, "lcSyringe", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			dbErrCtx(ctx, w, errors.Join(errors.New("failed to save file"), err), http.StatusBadRequest)

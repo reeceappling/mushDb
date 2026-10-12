@@ -51,16 +51,16 @@ func NewLRU(maxSize int) *LRU {
 	return c
 }
 
-func (c *LRU) Get(key string) ([]byte, bool) {
+func (c *LRU) Get(key string) (bs []byte, found bool, externallyCacheable bool) {
 	return c.getAndMoveToFront(key)
 }
 
-func (c *LRU) getAndMoveToFront(key string) ([]byte, bool) {
+func (c *LRU) getAndMoveToFront(key string) ([]byte, bool, bool) {
 	val, exists := c.m.Load(key)
 	if exists {
 		node := val.(*cacheNode)
 		c.moveToFront <- node // TODO: used to be c.moveExistingToFront(node)
-		return node.value, true
+		return node.value, true, node.externallyCacheable
 	}
 	return nil, false
 }
@@ -70,7 +70,7 @@ func (c *LRU) moveExistingToFront(node *cacheNode) {
 	_ = c.removeNodeFromLLNoCountChange(node)
 	c.addToFrontNoCountChange(node)
 }
-func (c *LRU) Add(key string, value []byte) (overwritten bool) {
+func (c *LRU) Add(key string, value []byte, externallyCacheable bool) (overwritten bool) {
 	val, exists := c.m.Load(key)
 	if exists {
 		existingNode := val.(*cacheNode)
@@ -85,8 +85,9 @@ func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 	// If new, then add the node
 	go func() { // TODO: gofunc ok here?
 		c.addNode <- &cacheNode{
-			key:   key,
-			value: value,
+			key:                 key,
+			value:               value,
+			externallyCacheable: externallyCacheable,
 		}
 	}()
 	return false
@@ -194,7 +195,8 @@ func setOlderNewerPair(older, newer *cacheNode) {
 }
 
 type cacheNode struct {
-	key          string
-	value        []byte
-	newer, older *cacheNode
+	key                 string
+	value               []byte
+	newer, older        *cacheNode
+	externallyCacheable bool // TODO: use this!
 }

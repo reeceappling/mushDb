@@ -502,7 +502,8 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 				// Already wrote
 				return
 			}
-			newFileNameWithPrefixPath, errr := pics.SavePicFile(r.Context(), fieldBytes, "fruit", string(b58id), "img")
+			externallyCacheable := false // TODO: fix! Requires finalPerms
+			newFileNameWithPrefixPath, errr := pics.SavePicFile(r.Context(), fieldBytes, externallyCacheable, "fruit", string(b58id), "img")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

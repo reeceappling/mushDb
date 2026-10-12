@@ -405,8 +405,8 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-
-		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, "lc", string(b58id), "img")
+		externallyCacheable := false                                                                                          // TODO: fix! Requires finalPerms
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, externallyCacheable, "lc", string(b58id), "img") // TODO: needs to see whether public or not for external cacheability...
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

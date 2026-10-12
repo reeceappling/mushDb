@@ -11,6 +11,7 @@ import (
 )
 
 var lruCache *cache.LRU
+var lruPublicAssetCache *cache.LRU // TODO: this!
 
 func init() {
 	lruCache = cache.NewLRU(maxImagesInCache)
@@ -27,8 +28,8 @@ func GetFilePath(ctx context.Context) string {
 	return ctx.Value(filePathCtxKey).(string)
 }
 
-func SavePicFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
-	// TODO: save file to s3 if needed (probably not)
+func SavePicFile(ctx context.Context, bs []byte, externallyCacheable bool, prefixPath ...string) (string, error) {
+	// TODO: needs to see whether public or not for external cacheability...
 	filePath := GetFilePath(ctx)
 	if filePath == "" {
 		filePath = "/images" // TODO: FIXME!!!!
@@ -54,7 +55,7 @@ func SavePicFile(ctx context.Context, bs []byte, prefixPath ...string) (string, 
 				if err != nil {
 					println("failed to write file", err.Error())
 				} else {
-					lruCache.Add(whereToWrite, bs)
+					lruCache.Add(whereToWrite, bs, externallyCacheable)
 				}
 				return fileNameWithPrefixPath, err
 			}
@@ -68,25 +69,27 @@ func SavePicFile(ctx context.Context, bs []byte, prefixPath ...string) (string, 
 	return "", errors.New("failed to find a new fileName")
 }
 
-func getFile(pathPrefix, path string) (bytes []byte, err error) {
+func getFile(pathPrefix, path string) (bytes []byte, cacheableExternally bool, err error) {
 	fullPath := filepath.Join(pathPrefix, path)
 	// Try to get from LRU cache first
-	if bs, found := lruCache.Get(fullPath); found {
-		return bs, nil
+	if bs, found, externallyCacheable := lruCache.Get(fullPath); found {
+		// TODO: use externallyCacheable
+		return bs, externallyCacheable, nil
 	}
 	// Cache miss
 	bytes, err = os.ReadFile(fullPath)
 	if err != nil {
-		return bytes, err
+		return bytes, false, err
 	}
-	_ = lruCache.Add(fullPath, bytes)
-	return bytes, err
+	externallyCacheable := false                           // TODO: false ok here?  Requires finalPerms?
+	_ = lruCache.Add(fullPath, bytes, externallyCacheable) // TODO: should only ever pull from cache?!
+	return bytes, externallyCacheable, err
 }
-func GetStaticFile(path string) (bytes []byte, err error) {
+func GetStaticFile(path string) (bytes []byte, externallyCacheable bool, err error) {
 	return getFile("/staticFiles", path)
 }
 
-func GetPic(ctx context.Context, imgSubPath string) (bytes []byte, err error) {
+func GetPic(ctx context.Context, imgSubPath string) (bytes []byte, externallyCacheable bool, err error) {
 	return getFile(GetFilePath(ctx), imgSubPath)
 }
 

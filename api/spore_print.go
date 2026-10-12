@@ -452,7 +452,8 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch parts[0] {
 		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SavePicFile(r.Context(), fieldBytes, "sporePrint", string(b58Id), "img")
+			externallyCacheable := false // TODO: fix  Requires finalPerms
+			newFileNameWithPrefixPath, err := pics.SavePicFile(r.Context(), fieldBytes, externallyCacheable, "sporePrint", string(b58Id), "img")
 			if err != nil {
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
@@ -699,7 +700,8 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SavePicFile(r.Context(), fieldBytes, "sporePrint", string(b58id), "img")
+		externallyCacheable := false // TODO: fix  Requires finalPerms
+		newFileNameWithPrefixPath, errr := pics.SavePicFile(r.Context(), fieldBytes, externallyCacheable, "sporePrint", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)

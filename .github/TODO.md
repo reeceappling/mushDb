@@ -1,4 +1,9 @@
 # TODOs found while using
+- [] Asset caching stuff
+  - [ ] Preload images into a cache when GETs, SETs, updates, etc are performed.
+  - [ ] Headers (Cache-Control, Set-Cookie, Cache-Tag) for static assets
+  - [ ] Cache busting based on Cache Tags
+  - [ ] LRU cache of URLS of public entries to validate what can and cant be cached (impl at lruPublicAssetCache)
 - [x] Lazy load display images
   - [ ] ImageZoomer on normal images area, contams, and flushes
   - [ ] Add a "loading" spinner for images that are loading

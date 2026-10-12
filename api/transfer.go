@@ -390,7 +390,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var newFileNameWithPrefixPath string
-		newFileNameWithPrefixPath, err = pics.SavePicFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
+		externallyCacheable := false // TODO: fix! requires parent to be loaded
+		newFileNameWithPrefixPath, err = pics.SavePicFile(r.Context(), fieldBytes, externallyCacheable, "transfer", string(b58id), "img")
 		if err != nil {
 			http.Error(w, "failed to save image", http.StatusBadRequest)
 			return
