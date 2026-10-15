@@ -19,7 +19,7 @@ export default function ViewPageEntryID({props, children}: {
     const isTopLevel = (depth <= 1)// TODO: ensure ok (DOES NOT DO WHAT WE WANT FOR LIST PAGES)
     return <div className={"idComponent " + (isTopLevel ? "topLevelId" : "nonTopLevelId")}>
         <div className={"idTxt inlineChildren"}>
-            <div className={"mr-2"}>{props.txt ? <span itemProp={"additionalType"/* TODO: ensure ok*/}>props.txt</span> + ": " : ""}</div>
+            <div className={"mr-2"}>{props.txt!==undefined ? <><span itemProp={"additionalType"/* TODO: ensure ok*/}>{props.txt}</span>{": "}</> : ""}</div>
             <div>{children}</div>
             <div className={"ml-2"}>{children!==undefined&&"("}{(props.linkPage && !isTopLevel) ? /*TODO: microdata here or no?*/props.id : <IdPageLink id={props.id} entryType={props.entryType}/* isMainCollItem={IsMainCollEntryType(props.entryType)}*//>}{children!==undefined&&")"}</div>
         </div>

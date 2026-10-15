@@ -59,10 +59,7 @@ export default function PageWrapper(
 export function Footer() {
     const yr=new Date().getFullYear()
     return <footer className={styles.footer} role={"contentinfo"}>
-        <a
-            href="https://mush.appli.ng"
-            rel="noopener noreferrer"
-        >
+        <a href="https://mush.appli.ng" rel="noopener noreferrer">{/* TODO: what here?*/}
             {/*<Image*/}
             {/*    aria-hidden*/}
             {/*    src="/file.svg"*/}

@@ -1,4 +1,6 @@
 # TODOs found while using
+- [ ] Styling using container queries for components!
+- [ ] REDO MOBILE-FIRST DESIGN!
 - [] Asset caching stuff
   - [ ] Preload images into a cache when GETs, SETs, updates, etc are performed.
   - [ ] Headers (Cache-Control, Set-Cookie, Cache-Tag) for static assets

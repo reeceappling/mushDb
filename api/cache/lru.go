@@ -55,14 +55,14 @@ func (c *LRU) Get(key string) (bs []byte, found bool, externallyCacheable bool) 
 	return c.getAndMoveToFront(key)
 }
 
-func (c *LRU) getAndMoveToFront(key string) ([]byte, bool, bool) {
+func (c *LRU) getAndMoveToFront(key string) (result []byte, found bool, externallyCacheable bool) {
 	val, exists := c.m.Load(key)
 	if exists {
 		node := val.(*cacheNode)
 		c.moveToFront <- node // TODO: used to be c.moveExistingToFront(node)
 		return node.value, true, node.externallyCacheable
 	}
-	return nil, false
+	return nil, false, false
 }
 func (c *LRU) moveExistingToFront(node *cacheNode) {
 	c.mu.Lock()

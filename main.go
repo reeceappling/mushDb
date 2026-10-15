@@ -1439,6 +1439,9 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	}
 	bytes, externallyCacheable, err := picsRfid.GetPic(ctx, imgSubPath)
 	if err != nil {
+		if false {
+			println(externallyCacheable) // TODO: use
+		}
 		if errors.Is(err, os.ErrNotExist) {
 			//println("file does not exist!") // TODO: fix
 			http.Error(w, "image not found", http.StatusNotFound)
@@ -1571,6 +1574,7 @@ var getRfidHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reques
 	http.Redirect(w, r, newUrl, http.StatusFound)
 }
 var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	// TODO: put all images from gotten stuff into the LRU cache?
 	ctx := r.Context()
 	id, err := rfid.UrlDecodeString(r.PathValue("id"))
 	if err != nil {
@@ -1830,6 +1834,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
+		perms := out.Permissions()
 		userPermOnEntry := out.Permissions().HighestPermFor(user)
 		if userPermOnEntry == nil {
 			http.Error(w, "item requested cannot be read by this user", http.StatusForbidden)
@@ -1845,8 +1850,18 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if out.Permissions().BlanketPerm.CanRead() {
+		if perms.BlanketPerm.CanRead() {
 			w.Header().Set("doIndex", "true")
+			// TODO: if public, set all pictures to cacheable????
+			pictureUrls := []string{} // TODO: FIX!
+			for _, path := range pictureUrls {
+				// TODO: on updates, if changed from public to nonpublic, make sure to remove publicity!
+				publicPath := out.EntryType() + "/" + string(mainCollId.AsBase58())
+				// TODO: insert this into an LRU cache?
+				// TODO: check the LRU cache when retrieving a file....
+			}
+
+			println("got a public item. Should set all associated pictures to cacheable...")
 		} else {
 			w.Header().Set("doIndex", "false")
 		}

@@ -405,7 +405,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		externallyCacheable := false                                                                                          // TODO: fix! Requires finalPerms
+		externallyCacheable := false                                                                                          // TODO: FIX THIS IN ALL PLACES TO CHECK CACHEABILITY!                                                                                       // TODO: fix! Requires finalPerms
 		newFileNameWithPrefixPath, errr := pics.SavePicFile(ctx, fieldBytes, externallyCacheable, "lc", string(b58id), "img") // TODO: needs to see whether public or not for external cacheability...
 		if errr != nil {
 			err = errr
@@ -587,6 +587,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// TODO: EVERYWHERE, IF PERMS CHANGED FROM NONPUBLIC TO PUBLIC OR ETC, CHANGE CACHEABILITY STUFF!
 	finishMainCollItemUpdate(ctx, w, req.modsFor, &existing, req.PermsOnRequest)
 }
 

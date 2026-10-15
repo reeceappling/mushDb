@@ -11,7 +11,8 @@ import (
 )
 
 var lruCache *cache.LRU
-var lruPublicAssetCache *cache.LRU // TODO: this!
+
+//var lruPublicAssetCache *cache.LRU // TODO: this!
 
 func init() {
 	lruCache = cache.NewLRU(maxImagesInCache)
@@ -70,6 +71,7 @@ func SavePicFile(ctx context.Context, bs []byte, externallyCacheable bool, prefi
 }
 
 func getFile(pathPrefix, path string) (bytes []byte, cacheableExternally bool, err error) {
+	// TODO: if getting a nonstatic file, check whether or not it is externally cacheable!
 	fullPath := filepath.Join(pathPrefix, path)
 	// Try to get from LRU cache first
 	if bs, found, externallyCacheable := lruCache.Get(fullPath); found {

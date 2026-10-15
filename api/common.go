@@ -299,67 +299,67 @@ func migrateGrainWaterJarDependent[T CollectionItem, U CollItemWithGwjs](sessCtx
 //		return nil
 //	}
 func validateAndMigrateDbEntries(ctx context.Context) error {
-	//println("skipping db migration") // TODO: remove if migrating
-	//return nil
-	println("running db migration. THIS SHOULD NOT BE NORMALLY ACTIVE!!!!!!! SEARCH THE CODE FOR \"validateAndMigrateDbEntries\"")
-	return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
-		db := sessCtx.Client().Database(dbName)
-		// TODO: FIX Parent Type everywhere! it is now required on pretty much everything that is innoculated!
-
-		// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
-		if err := doMigrateForMissing(sessCtx, db, &AgarBatch{}, "agarBatch", []CollectionItem{
-			&Plate{}, &Slant{}, // TODO: ensure plate/slant imports add the batch
-		}, exAltId); err != nil {
-			return err
-		}
-
-		// TODO: migrate grain batch dependent things (jar, grainWaterJar (already required))
-		// TODO: THEN make them not optional
-		if err := doMigrateForMissing(sessCtx, db, &GrainBatch{}, "grainBatch", []CollectionItem{
-			&GrainJar{}, // TODO: ensure grainJar imports add the batch (and recipe?)
-		}, exAltId); err != nil {
-			return err
-		}
-
-		// TODO: migrate substrate batch dependent things (bag, box)
-		// TODO: THEN make them not optional
-		if err := doMigrateForMissing(sessCtx, db, &SubstrateBatch{}, "substrateBatch", []CollectionItem{
-			&Bag{},             // TODO: ensure bag imports add the batch and recipe
-			&FruitingChamber{}, // TODO: ensure fc imports add the batch and recipe
-		}, exAltId); err != nil {
-			return err
-		}
-
-		// TODO: migrate pc run dependent things (Jar(DO ALL WITHOUT) (required when: innoculated, or just after pc run), plugs(DO ALL WITHOUT)(required when: innoculated, or just after pc run), agarBatch?(DO ALL WITHOUT), waterJar(DO ALL WITHOUT), bag(required when: innoculated, sealed, or after pc run)(DO ALL WITHOUT), stasisTube(required when?))(DO ALL WITHOUT)
-		// TODO: THEN make them not optional where needed
-		// 	TODO: ? optional are: Jar, Plugs, Bag, AgarBatch?, StasisTube?
-		// 	TODO: ? required are: WaterJar, AgarBatch?, StasisTube?
-		if err := doMigrateForMissing(sessCtx, db, &PCRun{}, "pcRun", []CollectionItem{
-			&AgarBatch{}, &Bag{}, &GrainJar{}, &PlugsJar{}, &StasisTube{}, &WaterJar{},
-		}, exAltId); err != nil {
-			return err
-		}
-
-		// TODO: migrate grain water jar dependent things (agarBatch, LC), keep optional on the things. May not need to do because optional
-		// TODO: iterate over all agarBatches where a gwj should exist. Keep optional.
-		// TODO: iterate over all LC where gwj should exist. Keep optional.
-		println("migrating grainwater jar dependents")
-		updGwj, err := NewMods().Push("grainWaterJars", mainCollIdForint(idTestGrainWaterJar)).Finalized()
-		if err != nil {
-			return err
-		}
-		if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &AgarRecipe{}, &AgarBatch{}, "agarRecipe"); err != nil {
-			return err
-		}
-		if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &LcRecipe{}, &LiquidCulture{}, "recipe"); err != nil {
-			return err
-		}
-
-		// TODO: DONT migrate water jar dependent things? ((mss (keep optional, because bought mss will not have a water source), stasis tube (stays optional, because it may have just been PC'd with the water in it already)))
-
-		return errors.New("made it to the end of validateAndMigrateDbEntries, but committing the txn is currently disabled") // TODO: remove this line when we want to actually commit migration transaction
-		// TODO: return nil
-	})
+	println("skipping db migration") // TODO: remove if migrating
+	return nil
+	//println("running db migration. THIS SHOULD NOT BE NORMALLY ACTIVE!!!!!!! SEARCH THE CODE FOR \"validateAndMigrateDbEntries\"")
+	//return newTxnNoInterface(ctx, func(sessCtx mongo.SessionContext) error {
+	//	db := sessCtx.Client().Database(dbName)
+	//	// TODO: FIX Parent Type everywhere! it is now required on pretty much everything that is innoculated!
+	//
+	//	// TODO: migrate agar batch dependent things (plate, slant), then make them not optional
+	//	if err := doMigrateForMissing(sessCtx, db, &AgarBatch{}, "agarBatch", []CollectionItem{
+	//		&Plate{}, &Slant{}, // TODO: ensure plate/slant imports add the batch
+	//	}, exAltId); err != nil {
+	//		return err
+	//	}
+	//
+	//	// TODO: migrate grain batch dependent things (jar, grainWaterJar (already required))
+	//	// TODO: THEN make them not optional
+	//	if err := doMigrateForMissing(sessCtx, db, &GrainBatch{}, "grainBatch", []CollectionItem{
+	//		&GrainJar{}, // TODO: ensure grainJar imports add the batch (and recipe?)
+	//	}, exAltId); err != nil {
+	//		return err
+	//	}
+	//
+	//	// TODO: migrate substrate batch dependent things (bag, box)
+	//	// TODO: THEN make them not optional
+	//	if err := doMigrateForMissing(sessCtx, db, &SubstrateBatch{}, "substrateBatch", []CollectionItem{
+	//		&Bag{},             // TODO: ensure bag imports add the batch and recipe
+	//		&FruitingChamber{}, // TODO: ensure fc imports add the batch and recipe
+	//	}, exAltId); err != nil {
+	//		return err
+	//	}
+	//
+	//	// TODO: migrate pc run dependent things (Jar(DO ALL WITHOUT) (required when: innoculated, or just after pc run), plugs(DO ALL WITHOUT)(required when: innoculated, or just after pc run), agarBatch?(DO ALL WITHOUT), waterJar(DO ALL WITHOUT), bag(required when: innoculated, sealed, or after pc run)(DO ALL WITHOUT), stasisTube(required when?))(DO ALL WITHOUT)
+	//	// TODO: THEN make them not optional where needed
+	//	// 	TODO: ? optional are: Jar, Plugs, Bag, AgarBatch?, StasisTube?
+	//	// 	TODO: ? required are: WaterJar, AgarBatch?, StasisTube?
+	//	if err := doMigrateForMissing(sessCtx, db, &PCRun{}, "pcRun", []CollectionItem{
+	//		&AgarBatch{}, &Bag{}, &GrainJar{}, &PlugsJar{}, &StasisTube{}, &WaterJar{},
+	//	}, exAltId); err != nil {
+	//		return err
+	//	}
+	//
+	//	// TODO: migrate grain water jar dependent things (agarBatch, LC), keep optional on the things. May not need to do because optional
+	//	// TODO: iterate over all agarBatches where a gwj should exist. Keep optional.
+	//	// TODO: iterate over all LC where gwj should exist. Keep optional.
+	//	println("migrating grainwater jar dependents")
+	//	updGwj, err := NewMods().Push("grainWaterJars", mainCollIdForint(idTestGrainWaterJar)).Finalized()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &AgarRecipe{}, &AgarBatch{}, "agarRecipe"); err != nil {
+	//		return err
+	//	}
+	//	if err = migrateGrainWaterJarDependent(sessCtx, db, updGwj, &LcRecipe{}, &LiquidCulture{}, "recipe"); err != nil {
+	//		return err
+	//	}
+	//
+	//	// TODO: DONT migrate water jar dependent things? ((mss (keep optional, because bought mss will not have a water source), stasis tube (stays optional, because it may have just been PC'd with the water in it already)))
+	//
+	//	return errors.New("made it to the end of validateAndMigrateDbEntries, but committing the txn is currently disabled") // TODO: remove this line when we want to actually commit migration transaction
+	//	// TODO: return nil
+	//})
 }
 
 //func validateDbEntries(ctx context.Context) {
