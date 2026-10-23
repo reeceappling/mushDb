@@ -1,0 +1,17 @@
+---
+roles:
+  # Install from Ansible Galaxy with a specific version
+  - name: geerlingguy.docker
+    #version: "3.1.0" # TODO: ???
+  - name: geerlingguy.docker_compose
+    #version: "3.1.0" # TODO: ???
+  - name: gantsign.golang
+    #version: "3.1.0" # TODO: ???
+  - name: geerlingguy.nodejs
+    #version: "3.1.0" # TODO: ???
+
+#  # Install from a specific Git repository URL
+#  - src: https://github.com
+#    scm: git
+#    version: master
+#    name: postgresql

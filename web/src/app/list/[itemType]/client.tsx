@@ -2,7 +2,6 @@
 
 import {AssertPcRun, PcRunListPageTable} from "@/app/components/pcRunClient";
 import {PcRunData} from "@/app/components/pcRunServer";
-import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import React from "react";
 import {AssertArrayResult, AssertDualListResult, viewUrlFor} from "@/app/components/common";
@@ -19,7 +18,7 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {AssertSubspecies, SubspeciesListPageTable} from "@/app/components/subspeciesClient";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
 import {AssertStasisTube, StasisTubeListPageTable} from "@/app/components/stasisTubeClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {AssertSporeSwab, SporeSwabListPageTable} from "@/app/components/sporeSwabClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {AssertSporePrint, SporePrintListPageTable} from "@/app/components/sporePrintClient";
@@ -35,7 +34,7 @@ import {LcData} from "@/app/components/lcServer";
 import {AssertLc, LcListPageTable} from "@/app/components/lcClient";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {AssertJarRecipe, JarRecipeListPageTable} from "@/app/components/jarRecipeClient";
-import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AssertLcSyringe, LcSyringeListPageTable} from "@/app/components/lcSyringeClient";
 import {JarData} from "@/app/components/jarServer";
 import {AssertJar, JarListPageTable} from "@/app/components/jarClient";
@@ -59,7 +58,7 @@ import {SaleData} from "@/app/components/saleServer";
 import {AssertSale, SaleListPageTable} from "@/app/components/saleClient";
 import {TransferData} from "@/app/components/transferServer";
 import {AssertTransfer, TransferListPageTable} from "@/app/components/transferClient";
-import {PlugsJar} from "@/app/components/plugsServer";
+import {PlugsData} from "@/app/components/plugsServer";
 import {AssertPlugs, PlugsListPageTable} from "@/app/components/plugsClient";
 
 export default function ListDisplay({itemType, inpData}: { itemType: string, inpData: any }) {
@@ -141,7 +140,7 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                 }
                 }/>
             case "lcSyringes":
-                AssertArrayResult<LcSyringe>(inpData, AssertLcSyringe)
+                AssertArrayResult<LcSyringeData>(inpData, AssertLcSyringe)
                 return <LcSyringeListPageTable data={inpData} onClick={(v) => {
                     window.location.assign(viewUrlFor("lcSyringe", v._id))
                 }
@@ -176,7 +175,7 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                     window.location.assign(viewUrlFor("plate", v._id))
                 }}/>
             case "plugs":
-                AssertArrayResult<PlugsJar>(inpData, AssertPlugs)
+                AssertArrayResult<PlugsData>(inpData, AssertPlugs)
                 return <PlugsListPageTable data={inpData} onClick={(v) => {
                     window.location.assign(viewUrlFor("plugs", v._id)) // TODO: not working as link as expected
                 }}/>
@@ -211,7 +210,7 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                 }
                 }/>
             case "sporeSwabs":
-                AssertArrayResult<SporeSwab>(inpData, AssertSporeSwab)
+                AssertArrayResult<SporeSwabData>(inpData, AssertSporeSwab)
                 return <SporeSwabListPageTable data={inpData} onClick={(v) => {
                     window.location.assign(viewUrlFor("sporeSwab", v._id))
                 }
@@ -270,9 +269,9 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                 }
                 }/>
             default:
-                return <ErrorDisplay err={"Unhandled list item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
+                return <ErrorDisplay err={"Unhandled list item type: " + itemType}/>
         }
     } catch (error) {
-        return <ErrorDisplay err={JSON.stringify(error)} headerLevel={1}></ErrorDisplay>
+        return <ErrorDisplay err={JSON.stringify(error)}></ErrorDisplay>
     }
 }

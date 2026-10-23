@@ -1,13 +1,12 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {SelectorProps} from "@/app/components/selector";
-import {ProjectPerms} from "@/app/components/perms";
 
 export function TestProjectOk(){
-    let perms = new Map<string, string>();
+    const perms = new Map<string, string>();
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")
-    const a: ProjectData = {
+    return new ProjectData({
         _id: "(PROJECT NAME HERE)",
         creationDate: 123,
         completed: 456, // Optional
@@ -19,16 +18,15 @@ export function TestProjectOk(){
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
-        perms: perms,
-    }
-    return a
+        perms: perms, // TODO: is this ok?
+    })
 }
 export function TestProjectOk2(){
-    let perms = new Map<string, string>();
+    const perms = new Map<string, string>();
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")
-    const a: ProjectData = {
+    return new ProjectData({
         _id: "(PROJECT NAME HERE)",
         creationDate: 123,
         notes: [{
@@ -39,27 +37,48 @@ export function TestProjectOk2(){
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
+        perms: perms,
+    })
+}
+
+export interface ProjectData {
+    _id: string, // project name
+    creationDate: number,
+    private: boolean,
+    completed?: number,
+    notes?: Note[],
+    lastUpdated: number,
+    perms?: Map<string, string>, // Map of userId to "read/write/admin"
+}
+export class ProjectData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<ProjectData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
     }
-    return a
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this._id)
+    }
+    public entryType(): string {
+        return "project"
+    }
+    public description(): string {
+        return `Project ${this._id}. ${this.completed!==undefined?`Completed on ${new Date(this.completed).toISOString()}`:"Ongoing"}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+    }
 }
 
-export type ProjectData = {
-    _id: string // project name
-    creationDate: number
-    completed?: number
-    notes?: Note[]
-    lastUpdated: number
-    perms?: Map<string, string> // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
-}
-
-// Confirmed to be working without going to get data
+// Confirmed to be working without going to get data // TODO: delete if unused? Make closeable?
 export function ProjectSelector(sp: SelectorProps<ProjectData>){
     // TODO: FIX THIS?
     return <select className={"tailwindSelector"} onChange={e => { // TODO: DISABLE THIS RETURN!
-        // TODO: FIX NEXT LINE
-        sp.doSelect({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()})
+        e.stopPropagation() // TODO: ok?
+        sp.doSelect(new ProjectData({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()}))
     }}>
-        <option value={"A"}>{"A"}</option>
+        <option value={"A"}>{"A"}</option>{/* TODO: gross and change to realistic*/}
         <option value={"B"}>{"B"}</option>
         <option value={"C"}>{"C"}</option>
     </select>
@@ -80,5 +99,3 @@ export function ProjectSelector(sp: SelectorProps<ProjectData>){
     //     <NewProjectForm onCreate={sp.doSelect}/>
     // </RecentSelector>
 }
-
-export const ChannelTextNewProject = "newProject"

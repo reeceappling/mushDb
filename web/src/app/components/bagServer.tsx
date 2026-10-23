@@ -1,44 +1,40 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Contamination} from "@/app/components/formSubcomponents/contaminations";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
-import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {BagSelector, NewBagForm} from "@/app/components/bagClient";
+import {BagSelector} from "@/app/components/bagClient";
 
-export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
-    const a: BagData = {
-        _id: "(BAG ID HERE)",
-        recipe: "(SUB RECIPE)",
-        //substrateBatch: // TODO: this
-        wetness: 5,
-        pcRun: "(PC RUN)",
-        filterSize: "(FILTER SIZE)",
-        creationDate: Date.now()-2000,
-        genSpore: 7,
-        genFruitOrSpore:2,
-        sealDate: Date.now()-1000,
-        knownFruitable: true,
-        species: "(SPECIES)",
-        subspecies: "(SUBSPECIES)",
-        innoc: "(INNOC ID)",
-        transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
-        parentType: "plate",
-        parent: "(PARENT ID)",
-        pics: [], // TODO: this???
-        contamination: [], // TODO: THIS?
-        mostRecentImage: undefined, // TODO: ?
-        flushes: [], // TODO: ?
-        sale: "(SALE_ID)",
-        disposed: Date.now()+5000,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
-}
+// export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
+//     return new BagData({
+//         _id: "(BAG ID HERE)",
+//         recipe: "(SUB RECIPE)",
+//         //substrateBatch: // TODO: this
+//         wetness: 5,
+//         pcRun: "(PC RUN)",
+//         filterSize: "(FILTER SIZE)",
+//         creationDate: Date.now()-2000,
+//         genSpore: 7,
+//         genFruitOrSpore:2,
+//         sealDate: Date.now()-1000,
+//         knownFruitable: true,
+//         species: "(SPECIES)",
+//         subspecies: "(SUBSPECIES)",
+//         innoc: "(INNOC ID)",
+//         transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
+//         parentType: "plate",
+//         parent: "(PARENT ID)",
+//         pics: [], // TODO: this???
+//         contamination: [], // TODO: THIS?
+//         mostRecentImage: undefined, // TODO: ?
+//         flushes: [], // TODO: ?
+//         sale: "(SALE_ID)",
+//         disposed: Date.now()+5000,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface BagData {
     _id: string
@@ -50,7 +46,7 @@ export interface BagData {
     genSpore?: number
     genFruitOrSpore?: number
     sealDate?: number
-    wetness?: number // TODO: handle everywhere
+    wetness?: number
     knownFruitable?: boolean
     species?: string
     subspecies?: string
@@ -66,7 +62,34 @@ export interface BagData {
     disposed?: number
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
+}
+export class BagData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<BagData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "bag"
+    }
+    public description(): string {
+        if(this.species !== undefined){
+            const kfSent = this.knownFruitable!==undefined?"":(this.knownFruitable?"Known fruitable.":"Nonfruitable")
+            const filterSizeSent = "" // TODO: ????
+            const flushesSent = (this.flushes!==undefined&&this.flushes.length!==0)?`${this.flushes.length} flushes.`:""
+            const contamsSent = (this.contamination!==undefined&&this.contamination.length!==0)?`${this.contamination.length} contam notes.`:"Not noted as contaminated."
+            return `Bag ${this._id}. Species: ${this.species}. ${this.subspecies!==undefined&&`Subspecies: ${this.subspecies}`}. ${kfSent}.${contamsSent}${flushesSent}${filterSizeSent} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: contams?
+        }
+        if(this.disposed !== undefined){
+            return `Bag ${this._id}. Disposed on ${new Date(this.disposed).toISOString()} after ${this.flushes?this.flushes.length:0} flushes`
+        }
+        return `Bag ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
+    }
 }
 
 export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
@@ -79,13 +102,11 @@ export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
     return <CloseableSelector<BagData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Bag List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "bag",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: BagData) => v._id,
         createSelector:(selHdl: (onSelect: BagData) => void)=>{
             return <BagSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)
