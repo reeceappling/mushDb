@@ -42,27 +42,26 @@ import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 
-export const clientPostRequestHeaders = {
+// TODO: combine headers into a base header...
+const baseRequestHeaders = {
     credentials: 'include',
     'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
-    'Content-type': "application/json",
     'Accept': "application/json", // TODO: ensure ok
 }
+export const clientPostRequestHeaders = {
+    ...baseRequestHeaders,
+    'Content-type': "application/json",
+}
 export const clientGetRequestHeaders = {
-    credentials: 'include',
-    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
-    'Accept': "application/json", // TODO: ensure ok
+    ...baseRequestHeaders,
 }
 
 export const clientPostRequestHeadersMultipart = {
-    credentials: 'include',
-    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
+    ...baseRequestHeaders,
     // 'Content-type': "multipart/form-data", // If this is set, it will not work (bounds not auto-calculated)
-    'Accept': "application/json",
 }
 
-// TODO: remove cookies from args if it works without
-export function SendMultipartRequest(url: string, formData: FormData, cookies: string) {
+export function SendMultipartRequest(url: string, formData: FormData) {
     return fetch(url, {
         method: 'Post',
         body: formData,
@@ -676,8 +675,9 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
         });
 }
 
+// TODO: remove cookies from this?
 export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e: any) => void, cookies: string, dispatchUpdate: (isErr: boolean, text: string) => void) {
-    SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
+    SendMultipartRequest(importApiUrlFor(typeStr), formData)
         .then(ImportResponseHandler(asserter, typeStr, setErr))
         .catch(caughtErr => {
             const newErr = JSON.stringify(caughtErr)
@@ -1050,8 +1050,9 @@ export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeA
         })
 }
 
+// TODO: remove cookies from this?
 export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
-    return SendMultipartRequest(createApiUrlFor(entryType), formData, cookies)
+    return SendMultipartRequest(createApiUrlFor(entryType), formData)
         .then(HandleJsonResponse)
         .then((entry): T => {
             asserter(entry)
@@ -1071,8 +1072,9 @@ export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, 
         })
 }
 
+// TODO: remove cookies from this?
 export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
-    return SendMultipartRequest(updateApiUrlFor(entryType, urlId), formData, cookies)
+    return SendMultipartRequest(updateApiUrlFor(entryType, urlId), formData)
         .then(HandleJsonResponse)
         .then((entry) => {
             asserter(entry)

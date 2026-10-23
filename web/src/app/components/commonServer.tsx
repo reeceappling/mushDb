@@ -33,3 +33,18 @@ export function CreatedUpdatedDisposedArea(
         <DisposedDisplay readonly={readonly} initial={initialDisposed} setDisposedOnParent={setDisposedOnParent}/>
     </>
 }
+// export function CreatedUpdatedDisposedAreaV2(
+//     {created, updated, initialDisposed, readonly, setDisposedOnParent}: {
+//         created: number,
+//         updated: number,
+//         initialDisposed?: number,
+//         readonly: boolean,
+//         setDisposedOnParent?: (n?: number) => void,
+//     }
+// ) {
+//     return <>
+//         <DateArea pre={"Created: "} when={created} readonly={true}/>{/*9+10em*/}
+//         <DateArea pre={"Updated: "} when={updated} readonly={true}/>{/*9+10em*/}
+//         <DisposedDisplay readonly={readonly} initial={initialDisposed} setDisposedOnParent={setDisposedOnParent}/>{/*10+10em OR 10+checkbox*/}
+//     </>
+// }

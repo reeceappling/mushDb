@@ -1,6 +1,8 @@
 # TODOs found while using
+- [ ] search "how to size text between mobile and desktop" to find optimal settings?
 - [ ] Styling using container queries for components!
 - [ ] REDO MOBILE-FIRST DESIGN!
+  - [ ] Also use css clamp() for smooth design
 - [] Asset caching stuff
   - [ ] Preload images into a cache when GETs, SETs, updates, etc are performed.
   - [ ] Headers (Cache-Control, Set-Cookie, Cache-Tag) for static assets

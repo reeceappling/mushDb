@@ -8,16 +8,19 @@ import (
 	"github.com/reeceappling/mushDb/api/cache"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-var lruCache *cache.LRU
-
-//var lruPublicAssetCache *cache.LRU // TODO: this!
+var (
+	lruCache, lruForCacheability *cache.LRU
+)
 
 func init() {
 	lruCache = cache.NewLRU(maxImagesInCache)
+	lruForCacheability = cache.NewLRU(cacheabilityhistory) // TODO: utilize?
 }
 
+const cacheabilityhistory = 20
 const maxImagesInCache = 10 // TODO: 10 ok?
 const filePathCtxKey = "dbImageFilePath"
 
@@ -28,7 +31,13 @@ func SetFilePath(ctx context.Context, filePath string) context.Context {
 func GetFilePath(ctx context.Context) string {
 	return ctx.Value(filePathCtxKey).(string)
 }
-
+func AddCacheableEntry(ctx context.Context, entryType string, entryId string) { // TODO: use?
+	key := entryType + "/" + entryId // TODO: ensure ok!
+	_, found, _ := lruForCacheability.Get(key)
+	if !found {
+		lruForCacheability.Add(key, nil, true)
+	}
+}
 func SavePicFile(ctx context.Context, bs []byte, externallyCacheable bool, prefixPath ...string) (string, error) {
 	// TODO: needs to see whether public or not for external cacheability...
 	filePath := GetFilePath(ctx)
@@ -83,7 +92,11 @@ func getFile(pathPrefix, path string) (bytes []byte, cacheableExternally bool, e
 	if err != nil {
 		return bytes, false, err
 	}
-	externallyCacheable := false                           // TODO: false ok here?  Requires finalPerms?
+	externallyCacheable := false // TODO: false ok here?  Requires finalPerms?
+	pathParts := strings.Split(path, "/")
+	if len(pathParts) > 2 {
+		_, externallyCacheable, _ = lruForCacheability.Get(pathParts[0] + "/" + pathParts[1]) // TODO: ensure ok
+	}
 	_ = lruCache.Add(fullPath, bytes, externallyCacheable) // TODO: should only ever pull from cache?!
 	return bytes, externallyCacheable, err
 }
