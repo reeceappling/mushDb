@@ -1,6 +1,6 @@
 import Image from "next/image";
 import styles from "./page.module.css";
-import PageWrapper, {Footer} from "@/app/components/clientGeneric";
+import PageWrapper from "@/app/components/clientGeneric";
 import React from "react";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {cookies} from "next/headers";

@@ -1,9 +1,180 @@
 # TODOs found while using
+- [ ] JWTs to store user session creds without adding extra memory strain serverside?
+- [ ] robots.txt
+  - [ ] User-agent: *
+    Disallow: /honeypotEndpointsSection1/
+  - [ ] Honeypotting (https://webdecoy.com/blog/honeypot-traps-forms-buttons-endpoints-practical-guide/#part-2-button-honeypots)
+    - [ ] Invisible form fields
+    - [ ] Add an invisible submit button before the real one in the DOM
+      - ```html
+        <button type="submit"
+          name="action"
+          value="honeypot-submit"
+          style="position:absolute;left:-9999px;opacity:0;pointer-events:none;"
+          tabindex="-1"
+          aria-hidden="true">Submit</button>
+        ```
+    - [ ] Invisible Link Traps: Create hidden links that only bots discover when parsing the DOM:
+      - ```html 
+        <a href="/trap/admin-panel"
+        style="position:absolute;left:-9999px;font-size:0;"
+        tabindex="-1"
+        aria-hidden="true">Admin Panel</a>
+        ```
+  - [ ] Endpoint Honeypots
+    - Endpoint honeypots are fake API routes that attract vulnerability scanners and attackers.
+    - /api/admin/login, Admin panel hunting
+      /api/v1/users, Data enumeration
+      /.env, Configuration file exposure
+      /wp-admin, WordPress vulnerabilities
+      /.git/config, Source code exposure
+```javascript
+  const HONEYPOT_PATHS = [
+  '/api/admin/login',
+  '/api/v1/authenticate',
+  '/api/admin/users',
+  '/api/config',
+  '/api/backup',
+  '/api/debug',
+  '/.env',
+  '/.git/config',
+  '/wp-admin',
+  '/phpmyadmin',
+  ];
+
+  function honeypotMiddleware(req, res, next) {
+  const path = req.path.toLowerCase();
+
+  if (HONEYPOT_PATHS.some(hp => path.includes(hp))) {
+  // ══════════════════════════════════════════════════════════
+  // ATTACKER DETECTED - Log everything for threat intel
+  // ══════════════════════════════════════════════════════════
+  logAttackAttempt({
+    ip: req.ip,
+    path: req.path,
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+
+    // Add delay to waste attacker resources
+    const delay = Math.random() * 2000 + 500;
+    setTimeout(() => {
+      // Return realistic-looking response
+      res.status(401).json({
+        error: 'Invalid credentials',
+        message: 'Please check your username and password'
+      });
+    }, delay);
+    return;
+  }
+  next();
+  }
+  app.use(honeypotMiddleware);
+```
+- [ ] Honeypot attack pattern detection
+```js
+const ATTACK_PATTERNS = {
+sql_injection: [
+/union\s+select/i,
+/or\s+1\s*=\s*1/i,
+/'\s*or\s*'/i,
+/--/,
+],
+xss: [
+/<script/i,
+/javascript:/i,
+/on\w+\s*=/i,
+],
+path_traversal: [
+/\.\.\//,
+/\.\.%2f/i,
+],
+};
+
+function detectAttackType(payload) {
+const payloadStr = JSON.stringify(payload).toLowerCase();
+
+for (const [attackType, patterns] of Object.entries(ATTACK_PATTERNS)) {
+if (patterns.some(p => p.test(payloadStr))) {
+return { type: attackType, severity: 'critical' };
+}
+}
+return { type: 'probe', severity: 'medium' };
+}
+```
+- [ ] Minimum time honeypot. Autodecline forms that were filled out too quickly
+- [ ] Mouse movement and keystroke honeypot
+  - Bots often have zero mouse movement or keystrokes
+```js
+  class InteractionHoneypot {
+  constructor(formId) {
+  this.form = document.getElementById(formId);
+  this.interactions = { keys: 0, moves: 0, focuses: 0 };
+  this.init();
+  }
+
+  init() {
+  this.form.addEventListener('keydown', () => this.interactions.keys++);
+  this.form.addEventListener('mousemove', () => this.interactions.moves++);
+
+  this.form.querySelectorAll('input, textarea').forEach(el => {
+  el.addEventListener('focus', () => this.interactions.focuses++);
+  });
+
+  this.form.addEventListener('submit', (e) => this.validate(e));
+  }
+
+  validate(e) {
+  const { keys, moves, focuses } = this.interactions;
+
+  // Humans typically have: keystrokes, mouse movement, field focuses
+  if (keys < 5 || moves < 10 || focuses < 2) {
+  e.preventDefault();
+  console.log('[HONEYPOT] Bot detected: insufficient interaction');
+  this.form.textContent = 'Thank you!'; // Fake success
+  return false;
+  }
+
+  // Add interaction data for server validation
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'interactions';
+  input.value = JSON.stringify(this.interactions);
+  this.form.appendChild(input);
+  }
+  }
+new InteractionHoneypot('contact-form');
+```
+- Honeypot component things:
+```html
+<!-- Complete honeypot with all protection layers -->
+<div style="position: absolute; left: -9999px; top: -9999px;"
+     aria-hidden="true">
+  <label for="hp_field">Leave empty</label>
+  <input type="text"
+         id="hp_field"
+         name="hp_field"
+         tabindex="-1"
+         autocomplete="off"
+         autocomplete="new-password"
+         autocorrect="off"
+         autocapitalize="off"
+         data-lpignore="true"
+         data-form-type="other">
+</div>
+```
+  1. position: absolute; left: -9999px	Visual interaction
+  2. aria-hidden="true"	Screen reader interaction
+  3. tabindex="-1"	Keyboard Tab navigation
+  4. autocomplete="off"	Browser autofill
+  5. data-lpignore="true"	Password manager autofill
 - [ ] search "how to size text between mobile and desktop" to find optimal settings?
 - [ ] Styling using container queries for components!
 - [ ] REDO MOBILE-FIRST DESIGN!
   - [ ] Also use css clamp() for smooth design
-- [] Asset caching stuff
+- [ ] Asset caching stuff
   - [ ] Preload images into a cache when GETs, SETs, updates, etc are performed.
   - [ ] Headers (Cache-Control, Set-Cookie, Cache-Tag) for static assets
   - [ ] Cache busting based on Cache Tags

@@ -1,10 +1,8 @@
 import React from "react";
 import PageWrapper from "@/app/components/clientGeneric";
-import TestSlider from "@/app/testpage/testClient";// TODO: del?
+import TestSlider from "@/app/testpage/testClient";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
-// TODO: del?
 import {Closeable} from "@/app/testpage/client";
-// TODO: del?
 import {DisplayFormWrapper} from "@/app/components/common";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.

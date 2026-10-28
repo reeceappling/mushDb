@@ -1,11 +1,8 @@
 import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
-import AuthArea from "@/app/components/authClient";
 import {Metadata} from "next";
-import {BaseExternalUrl, mushDbTitle} from "@/app/components/Constants";
+import {BaseExternalUrl} from "@/app/components/Constants";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
-import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.

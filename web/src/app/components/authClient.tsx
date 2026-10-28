@@ -58,6 +58,7 @@ export default function AuthArea(
                 {/* GOOGLE SIGN IN/UP*/}
                 <SignInArea onLogin={handleGoogleLoginSuccess}/>
             </div>
+            {/* TODO: user/pass login, guest login, and honeypot hidden inputs (and submit buttons) around them*/}
             {/*<div className="loginRow">*/}
             {/*    <a href={"/guestLogin"}>{"Continue as guest"}</a>*/}
             {/*</div>*/}
