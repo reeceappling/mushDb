@@ -730,8 +730,21 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 		Period: rateLimitPeriod,
 		Limit:  rateLimitCount,
 	}
-	rateLimiterStorage := memory.NewStore()                                                              // TODO: ok?
-	rateLimiterUnderlying := limiter.New(rateLimiterStorage, rate, limiter.WithTrustForwardHeader(true)) // TODO: trust header?
+	rateLimiterStorageOptions := limiter.StoreOptions{
+		Prefix:          "rateLimiterDefault",           // TODO: ????
+		CleanUpInterval: limiter.DefaultCleanUpInterval, // TODO: ?????
+	}
+	// memory.NewCache() // TODO: anything in here?
+	// TODO: limiter.WithClientIPHeader()
+	// TODO: limiter.GetIP()
+	// TODO: limiter.GetIPWithMask()
+	// TODO: limiter.NewRateFromFormatted()
+	// TODO: limiter.WithIPv4Mask()
+	// TODO: limiter.WithIPv6Mask()
+	limiterOpts := []limiter.Option{
+		limiter.WithTrustForwardHeader(true), // TODO: trust header?
+	}
+	rateLimiterUnderlying := limiter.New(memory.NewStoreWithOptions(rateLimiterStorageOptions), rate, limiterOpts...)
 	rateLimiter = stdlib.NewMiddleware(rateLimiterUnderlying).Handler
 
 	// Direction and auth middleware
