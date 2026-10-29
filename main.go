@@ -50,6 +50,8 @@ func init() {
 	baseApiUrl = fmt.Sprintf("%s://%s", extProto, extHost)
 }
 
+// TODO: SETUP ENV VARS TO BE PULLED VIA TAGS ON STRUCT
+
 func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, err error) {
 	dbHostName := os.Getenv("DB_HOST_NAME")
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
@@ -105,6 +107,7 @@ func main() {
 	// TODO: When to run runtime.GC() ?
 	// TODO: runtime.GoMaxProcs, maybe utilizing cpuid.CPU or https://pkg.go.dev/go.uber.org/automaxprocs
 	// TODO: this is the default: runtime.GOMAXPROCS(runtime.NumCPU())
+	// TODO: Go max cpu? go max mem? go gc settings?
 	ctx := context.Background()
 	// TODO: SETUP Health check service (also for telemetry, db, webserver, caches?, mainServer, rfidStuff). See /api/probes/health
 	// Set up OpenTelemetry.// TODO: DISABLE FOR NOW
@@ -458,6 +461,60 @@ func setupLogger(ctxIn context.Context) context.Context {
 func setupAuthSvc(ctxIn context.Context, sessionsCleanupFreq *time.Duration, sessionTTL *time.Duration) context.Context {
 	return rfid.NewAuthService(sessionsCleanupFreq, sessionTTL).OnContext(ctxIn)
 }
+
+type temp struct {
+	FieldName string `env:"ENV_VAR_NAME" dockerSecret:"secretName" defaultValue:"DEFAULT_VALUE_HERE"`
+}
+
+//func parseEnvDockerStruct[T any](toSet *T) (string, error){
+//	p := *toSet
+//	t := reflect.TypeOf(p)
+//
+//	// Iterate through all fields of the struct
+//	for i := 0; i < t.NumField(); i++ {
+//		field := t.Field(i)
+//
+//		strTag := field.Tag
+//		defaultValue, defaultExists := strTag.Lookup("defaultValue")
+//
+//		if dockerSecretName, exists := strTag.Lookup("dockerSecret"); exists {
+//			// TODO: handle env var
+//		}
+//
+//		// TODO: handle env var
+//		if envVarTag, exists := strTag.Lookup("env"); exists {
+//			split := strings.Split(envVarTag, ",")
+//			actualVal := os.Getenv(split[0])
+//			if actualVal == "" {
+//				if len(split) > 1 {
+//					return strings.Join(split[1:], ","), nil
+//				}
+//				if defaultExists {
+//					return defaultValue, nil
+//				}
+//				return actualVal, errors.New("no default value")
+//			}
+//		}
+//
+//		//// 1. Get the entire raw tag string
+//		//fmt.Printf("Field: %s, Raw Tag: %s\n", field.Name, field.Tag)
+//		//
+//		//// 2. Extract a specific key using Get()
+//		//jsonKey := field.Tag.Get("json")
+//		//fmt.Printf("  -> json key: %s\n", jsonKey)
+//		//
+//		//// 3. Robust extraction using Lookup()
+//		//if customVal, ok := field.Tag.Lookup("custom"); ok {
+//		//	fmt.Printf("  -> custom key found: %s\n", customVal)
+//		//} else {
+//		//	fmt.Printf("  -> custom key not found\n")
+//		//}
+//	}
+//	if defaultExists {
+//		
+//	}
+//	return "", errors.New("nothing found")
+//}
 
 func getSecret(secretName string) (string, error) {
 	path := filepath.Join("/run/secrets", secretName)
