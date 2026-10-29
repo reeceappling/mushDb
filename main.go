@@ -279,13 +279,14 @@ func main() {
 	} else {
 		println("No/invalid web host port specified, defaulting to 3000")
 	}
-	passthroughConfig := newPassthroughHandlerConfig().
+	passthroughConfig := newPassthroughHandlerBuilder().
 		useHttps(false).
 		withDestinationHost(webHostName).
 		withCookies(true).
 		withHeaders(true).
 		withPort(webHostPort).
-		withForwardedHost(extHost)
+		withForwardedHost(extHost).
+		buildConfig()
 
 	// Proxy combo middlewares
 	webAuthAdminMiddleware := rfid.GetAuthService(ctx).AuthAdminOrDenyMiddleware
@@ -355,6 +356,7 @@ func main() {
 	http.Handle("/testpage", Middlewares(tracerMiddleware("/testpage"), OptionsGetOnly /* TODO: ensure ok*/)(webProxyHandler))  // GET testpage is here (test page)       // TODO: REMOVE // TODO: options middleware?
 	// Admin pages (and admin backend endpoints)
 	http.Handle("/whitelistUser", Middlewares(tracerMiddleware("/whitelistUser"), OptionsGetPost /* TODO: ensure ok*/)(GetPostSplitterHandler(adminProxied, whitelistuserGoHandler))) // TODO: THIS! // TODO: options middleware?
+	// TODO: validate email, phone, etc endpoint (for links sent to phones, emails, etc)
 
 	println("Defining sensor data endpoints")
 	// TODO: this
@@ -1290,7 +1292,7 @@ var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 })
 
-type passthroughHandlerConfig struct {
+type passthroughHandlerBuilder struct {
 	redirectWithHttps bool
 	host              string
 	port              int
@@ -1298,9 +1300,10 @@ type passthroughHandlerConfig struct {
 	copyHeaders       bool
 	forwardedHost     *string
 }
+type passthroughHandlerConfig passthroughHandlerBuilder
 
-func newPassthroughHandlerConfig() passthroughHandlerConfig {
-	return passthroughHandlerConfig{
+func newPassthroughHandlerBuilder() passthroughHandlerBuilder {
+	return passthroughHandlerBuilder{
 		redirectWithHttps: false,
 		host:              "localhost",
 		port:              -1,
@@ -1309,29 +1312,32 @@ func newPassthroughHandlerConfig() passthroughHandlerConfig {
 	}
 }
 
-func (conf passthroughHandlerConfig) withDestinationHost(hostName string) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) withDestinationHost(hostName string) passthroughHandlerBuilder {
 	conf.host = hostName
 	return conf
 }
-func (conf passthroughHandlerConfig) withPort(port int) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) withPort(port int) passthroughHandlerBuilder {
 	conf.port = port
 	return conf
 }
-func (conf passthroughHandlerConfig) withForwardedHost(hostname string) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) withForwardedHost(hostname string) passthroughHandlerBuilder {
 	conf.forwardedHost = &hostname
 	return conf
 }
-func (conf passthroughHandlerConfig) useHttps(useHttps bool) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) useHttps(useHttps bool) passthroughHandlerBuilder {
 	conf.redirectWithHttps = useHttps
 	return conf
 }
-func (conf passthroughHandlerConfig) withCookies(retainCookies bool) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) withCookies(retainCookies bool) passthroughHandlerBuilder {
 	conf.copyCookies = retainCookies
 	return conf
 }
-func (conf passthroughHandlerConfig) withHeaders(retainHeaders bool) passthroughHandlerConfig {
+func (conf passthroughHandlerBuilder) withHeaders(retainHeaders bool) passthroughHandlerBuilder {
 	conf.copyHeaders = retainHeaders
 	return conf
+}
+func (conf passthroughHandlerBuilder) buildConfig() passthroughHandlerConfig {
+	return passthroughHandlerConfig(conf)
 }
 
 func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
