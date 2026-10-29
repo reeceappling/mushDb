@@ -1,0 +1,6 @@
+Thank you to the following individuals for their contributions to the security of this project:
+
+- Reece Appling: Created the project and implemented the initial security measures.
+
+
+Thank you to the following individuals for reporting vulnerabilities and helping to improve the security of this project:

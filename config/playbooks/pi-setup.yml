@@ -1,0 +1,103 @@
+# Execute with: ansible-playbook -i inventory.ini update_pi.yml
+# TODO: VALIDATE THIS WORKS!
+- name: Setup Raspberry Pi as an NFC reader writer with libnfc
+  hosts: pi
+  become: yes
+  tasks:
+    - name: Update apt cache and upgrade packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+    - name: Install required libraries and tools
+      apt:
+        name:
+          - libusb-dev
+          - libpcsclite-dev
+          - i2c-tools
+        state: present
+    - name: Ensure target directory exists for downloads
+      file:
+        path: /home/{{ ansible_user }}/src
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+    - name: Download libnfc source archive
+      get_url:
+        url: https://github.com/nfc-tools/libnfc/releases/download/libnfc-1.7.1/libnfc-1.7.1.tar.bz2
+        dest: /home/{{ ansible_user }}/src/libnfc.tar.bz2
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+    - name: Extract libnfc source archive
+      unarchive:
+        src: /home/{{ ansible_user }}/src/libnfc.tar.bz2
+        dest: /home/{{ ansible_user }}/src/
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+    - name: Run configure script
+      command: ./configure --prefix=/usr --sysconfdir=/etc
+      args:
+        chdir: /home/{{ ansible_user }}/src/libnfc
+    - name: Compile libnfc source code
+      command: make
+      args:
+        chdir: /home/{{ ansible_user }}/src/libnfc
+    - name: Install libnfc system-wide
+      command: make install
+      args:
+        chdir: /home/{{ ansible_user }}/src/libnfc
+    - name: Create libnfc configuration directory in /etc
+      file:
+        path: /etc/nfc
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Write libnfc configuration file
+      copy:
+        dest: /etc/nfc/libnfc.conf
+        owner: root
+        group: root
+        mode: '0644' # TODO: ENSURE OK!
+        content: |
+          # Allow device auto-detection (default: true)
+          # Note: if this auto-detection is disabled, user has to set manually a device
+          # configuration using file or environment variable
+          allow_autoscan = true
+            
+          # Allow intrusive auto-detection (default: false)
+          # Warning: intrusive auto-detection can seriously disturb other devices
+          # This option is not recommended, user should prefer to add manually his device.
+          allow_intrusive_scan = false
+            
+          # Set log level (default: error)
+          # Valid log levels are (in order of verbosity): 0 (none), 1 (error), 2 (info), 3 (debug)
+          # Note: if you compiled with --enable-debug option, the default log level is "debug"
+          log_level = 1
+            
+          # Manually set default device (no default)
+          # To set a default device, you must set both name and connstring for your device
+          # Note: if autoscan is enabled, default device will be the first device available in device list.
+          #device.name = "_PN532_SPI"
+          #device.connstring = "pn532_spi:/dev/spidev0.0:500000"
+          device.name = "_PN532_I2c"
+          device.connstring = "pn532_i2c:/dev/i2c-1"
+    - name: Wait for human to prepare hardware
+      pause:
+        prompt: "make sure that the switches on the NFC Module have been toggled as such: SEL0 : H, SEL1 : L. Press ENTER to run tests..."
+    - name: Detect I2C devices on bus 1
+      command: i2cdetect -y 1
+      register: i2c_output
+      changed_when: false
+    - name: Print I2C bus detection results
+      debug:
+        var: i2c_output.stdout_lines
+    - name: Test NFC hardware detection
+      command: nfc-list
+      register: nfc_output
+      changed_when: false
+      failed_when: false # TODO: ok? # Prevents the playbook from breaking if hardware isn't physically wired yet
+    - name: Print NFC test results
+      debug:
+        var: nfc_output.stdout_lines
