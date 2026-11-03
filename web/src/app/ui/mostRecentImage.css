@@ -1,10 +1,10 @@
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 .mriParent {
@@ -47,4 +47,22 @@ div {
         }
     }
 
+}
+.zoomedPicOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    cursor: pointer;
+}
+.large-image {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
 }

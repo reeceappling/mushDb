@@ -4,7 +4,7 @@ export default defineConfig({
   component: {
     devServer: {
       framework: 'next',
-      bundler: 'webpack'
+      bundler: 'webpack' // TODO: turbopack
     }
   },
   e2e: {

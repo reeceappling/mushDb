@@ -41,7 +41,7 @@ export function VolumeSelector({onChange,defaultUnit}:{defaultUnit?:string,onCha
             if(!s){
                 return
             }
-            let newNum = Number(s)
+            const newNum = Number(s)
             handleChange(newNum, vol)
             setNum(newNum)
         }}/>{/* TODO: ENSURE WORKS */}

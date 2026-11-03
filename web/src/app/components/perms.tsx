@@ -1,11 +1,5 @@
-import {useEffect, useState} from "react";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {useCookies} from "react-cookie";
-import {SelectorFor} from "@/app/components/selector";
-import {GetSessionUserProjects, NumberToPerm, PermToNumber} from "@/app/components/projectClient";
-import Textbox from "@/app/components/formSubcomponents/textbox";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {CheckArrayType, HandleTxtResponse, IsString} from "@/app/components/common";
+import {CheckArrayType, clientPostRequestHeaders, HandleTxtResponse, IsString} from "@/app/components/common";
 
 interface CookieValues {
     SessionId?: string;
@@ -64,13 +58,13 @@ export type ProjectPermSubset = {
 }
 
 export function filterProjectPermSubset(ppss: ProjectPermSubset, removeReads: boolean){
-    let out: ProjectPermSubset = {...ppss}
+    const out: ProjectPermSubset = {...ppss}
     if(!removeReads){
         return out
     }
     let toKeep: number[] = []
 
-    for(var i=0;i<ppss.ids.length;i++){
+    for(let i=0;i<ppss.ids.length;i++){
         if(ppss.canWrite){
             toKeep = [...toKeep, i]
         }
@@ -178,29 +172,25 @@ export function PermissionSelector({dontShowBelow,canWrite,onChange}:permSelecto
     return (
         <select className={"tailwindSelector"} value={valueFor(canWrite)} onChange={(e)=>onSelect(e.currentTarget.value)}>
             {optionsFor(dontShowBelow).map((str: string)=>{
-                return <option value={str}>{str}</option>
+                return <option key={str} value={str}>{str}</option>
             })}
         </select>
     )
 }
 
-export async function GetUserByString(sessionId?: string, nameOrEmail?: string):Promise<string>{
+export async function GetUserByString(/*sessionId?: string, */nameOrEmail?: string):Promise<string>{
     if(!nameOrEmail){
         return new Promise<string>((_,reject)=>{
             reject("no current name or email")
         })
     }
     const encodedNameOrEmail = encodeURIComponent(nameOrEmail)
-    if(!sessionId){
-        return new Promise<string>((_,reject)=>{reject("missing session")})
-    }
-    return fetch(BaseExternalUrl+"/idForUserOrEmail/"+encodedNameOrEmail, { // TODO: ensure works like we want!
+    // if(!sessionId){
+    // throw "missing session"
+    // }
+    return await fetch(BaseExternalUrl+"/idForUserOrEmail/"+encodedNameOrEmail, { // TODO: ensure works like we want!
         method: "GET",
-        headers: {
-            credentials: 'include',
-            SessionId: sessionId, // TODO: ew
-            'Content-type': "application/json"
-        },
+        headers: clientPostRequestHeaders,
         credentials: 'include' // To include cookies
     }).then(HandleTxtResponse)
 }

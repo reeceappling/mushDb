@@ -1,12 +1,15 @@
 Project Authors
 ===============
 
-TODO: This is where your explain when the project started, for which client, and list all devteams who contributes to it.
+
+
+For tracking my mycological samples, and lineages thereof, I used to mark everything with sharpies, but that was a pain.
+So I made this app to help me track my samples as well as any fungi I find in the wild!
 
 
 ## Developers/Engineers:
 
-* Reece Appling - Senior Software Engineer - Charlotte, NC (US)
+* Reece Appling - Charlotte, NC (US)
 
 ## Special thanks to
-TODO: Have fun here =] (optional item)
+Fungi everywhere

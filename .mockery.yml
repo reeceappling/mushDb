@@ -1,0 +1,24 @@
+# To regenerate mocks: run the following line from the root of the project
+# mockery
+all: false
+log-level: debug
+template: testify
+packages:
+  github.com/reeceappling/mushDb/api:
+    config:
+      include-auto-generated: true
+      recursive: true
+      # Generate only explicitly listed interfaces under this package.
+      all: false
+      dir: "api/mocks"
+      filename: "mocks.go"
+      pkgname: "mocks"
+      structname: "Mock{{.InterfaceName}}"
+    interfaces:
+      ReadWriteService:
+force-file-write: true
+#generate: true
+include-auto-generated: true
+recursive: true
+require-template-schema-exists: true
+template-schema: '{{.Template}}.schema.json'

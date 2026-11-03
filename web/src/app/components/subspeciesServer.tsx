@@ -1,21 +1,17 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {EntryPerms} from "@/app/components/perms";
-import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {SubspeciesSelector} from "@/app/components/subspeciesClient";
 
-export function TestSubspeciesOk(){
-    const a: SubspeciesData = {
-        _id: "(SUBSPECIES NAME HERE)",
-        species: "(SPECIES NAME HERE)",
-        aliases: ["(Alias 1)","(Alias 2)"],
-        notes: TestNotes,
-        lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
-}
+// export function TestSubspeciesOk(){
+//     return new SubspeciesData({
+//         _id: "(SUBSPECIES NAME HERE)",
+//         species: "(SPECIES NAME HERE)",
+//         aliases: ["(Alias 1)","(Alias 2)"],
+//         notes: TestNotes,
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//         defaultAcl: TestAcl(),
+//     })
+// }
 
 export interface SubspeciesData {
     _id: string
@@ -23,8 +19,28 @@ export interface SubspeciesData {
     aliases?: string[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
-    defaultAcl?: ACL
+    acl: ACL
+    defaultAcl: ACL
+}
+export class SubspeciesData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SubspeciesData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "subspecies"
+    }
+    public description(): string {
+        return `${this._id}, subspecies of ${this.species}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 // // TODO: there is an alternative to this, so we may not want this or to use it
@@ -44,7 +60,6 @@ export interface SubspeciesData {
 //         lowercase: "subspecies",
 //         //creatorInPage: sp.creatorInPage,// TODO: ???
 //         //createEndpt: "bag",// TODO: ???
-//         getId: (v: SubspeciesData) => v._id,
 //         createSelector:(selHdl: (onSelect: SubspeciesData) => void)=>{
 //             return <SubspeciesSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
 //                 v && selHdl(v)

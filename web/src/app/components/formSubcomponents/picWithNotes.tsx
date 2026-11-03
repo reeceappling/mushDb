@@ -20,7 +20,7 @@ export interface NewPicWithNotesForm {
 }
 
 export function InitialPicsEntries(initialPics?: PicWithNotesIncoming[]): SplitAllEntries<PicWithNotesForm,NewPicWithNotesForm>{
-    let initialEntries: Data<PicWithNotesForm>[] = initialPics===undefined?[]:initialPics.map((p)=>{
+    const initialEntries: Data<PicWithNotesForm>[] = initialPics===undefined?[]:initialPics.map((p)=>{
         return {
             data:{
                 time:p.time,
@@ -52,6 +52,23 @@ export interface PicWithNotesIncoming {
     location: string
     notes?: Note[]
 }
+
+export const ExamplePicsWithNotes: PicWithNotesIncoming[] = [
+    {
+        time:45678,
+        location:"test.jpg",
+        notes:[
+            {time:45679,note:"pic1note1"}
+        ]},
+    {
+        time:56789,
+        location:"test.jpg",
+        notes:[
+            {time:56789,note:"pic2note1"},
+            {time:56799,note:"pic2note2"},
+        ]
+    }
+]
 
 export function IsValidPicWithNotesIncoming(input: any): boolean {
     return (

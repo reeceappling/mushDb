@@ -7,19 +7,22 @@
 // import {BaseUrl} from "@/app/components/Constants";
 
 
-// TODO: gross, get rid of it likely
 import DateArea from "@/app/components/formSubcomponents/date";
 import {DisposedDisplay} from "@/app/components/formSubcomponents/commonClient";
 
 export default function Centered({children}:{children:React.ReactNode}){
     return <div className={"centerH"}>{children}</div>
 }
+export function CapitalizeFirstLetter(str: string): string {
+    if (!str || str==="") return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 export function CreatedUpdatedDisposedArea(
-    {created, updated, disposed, readonly, setDisposedOnParent}: {
+    {created, updated, initialDisposed, readonly, setDisposedOnParent}: {
         created: number,
         updated: number,
-        disposed?: number,
+        initialDisposed?: number,
         readonly: boolean,
         setDisposedOnParent?: (n?: number) => void,
     }
@@ -27,6 +30,21 @@ export function CreatedUpdatedDisposedArea(
     return <>
         <DateArea pre={"Created: "} when={created} readonly={true}/>
         <DateArea pre={"Updated: "} when={updated} readonly={true}/>
-        <DisposedDisplay readonly={readonly} disposed={disposed} setDisposedOnParent={setDisposedOnParent}/>
+        <DisposedDisplay readonly={readonly} initial={initialDisposed} setDisposedOnParent={setDisposedOnParent}/>
     </>
 }
+// export function CreatedUpdatedDisposedAreaV2(
+//     {created, updated, initialDisposed, readonly, setDisposedOnParent}: {
+//         created: number,
+//         updated: number,
+//         initialDisposed?: number,
+//         readonly: boolean,
+//         setDisposedOnParent?: (n?: number) => void,
+//     }
+// ) {
+//     return <>
+//         <DateArea pre={"Created: "} when={created} readonly={true}/>{/*9+10em*/}
+//         <DateArea pre={"Updated: "} when={updated} readonly={true}/>{/*9+10em*/}
+//         <DisposedDisplay readonly={readonly} initial={initialDisposed} setDisposedOnParent={setDisposedOnParent}/>{/*10+10em OR 10+checkbox*/}
+//     </>
+// }

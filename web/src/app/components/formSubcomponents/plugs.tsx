@@ -4,8 +4,9 @@ import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import * as React from "react";
-import {DowelEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
+import { DowelEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {DowelType} from "@/app/components/plugsServer";
+import {useEffect, useState} from "react";
 
 export function WoodTypeSelectorForNew(
     {onSelect, blacklist}: {
@@ -30,32 +31,51 @@ export function WoodTypeSelectorForNew(
     }
     }/>
 }
-
-export function WoodEntriesGroupForNew({currentEntries, updateParent}: {
-    currentEntries: DowelType[],
+export function WoodEntriesGroupForNew({
+                                               initial,
+                                               updateParent,
+                                           }: {
+    initial: DowelType[],
     updateParent: (l: DowelType[]) => void
 }) {
-    const handleSelect = (v: DowelType) => {
-        let data = [...(currentEntries || []), v];
-        updateParent(data)
+    const [current, setCurrent] = useState<DowelType[]>(initial)
+
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial])
+
+    const doUpdate = (upd: DowelType[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
+
+    const handleSelectType = (v: string) => {
+        const data = [...current, { wood: v, size: 0.25, units: "in" }] // TODO: MODIFY ON OTHERS!
+        doUpdate(data)
+    }
+
     return <div>
-        {currentEntries.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
-            {currentEntries.map((n, i) => {
+        {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n, i) => {
                 return <div key={n.wood} className={"contentsOnly"}>
-                    <DowelEntryForNew currentValue={n} updateParent={(updated: DowelType) => {
-                        updateParent([...(currentEntries || [])].map((existing) => {
-                            return existing.wood !== n.wood ? existing : updated
-                        }))
-                    }}/>
-                    <RemoveButton txt={"Remove"} click={() => {
-                        updateParent([...(currentEntries || [])].filter((existing) => existing.wood !== n.wood))
-                    }}/>
+                    <DowelEntryForNew
+                        initial={n}
+                        updateParent={(updated: DowelType) => {
+                            doUpdate(current.map((existing, idx) => idx === i ? updated : existing))
+                        }}
+                    />
+                    <RemoveButton
+                        txt={"Remove"}
+                        click={() => {
+                            doUpdate(current.filter((_, idx) => idx !== i))
+                        }}
+                    />
                 </div>
             })}
         </div>}
-        <WoodTypeSelectorForNew onSelect={(val) => {
-            val && handleSelect({wood: val, size: 1.0/4.0, units: "in"}) // TODO: default ok?
-        }} blacklist={currentEntries.map((v) => v.wood)}/>
+        <WoodTypeSelectorForNew
+            onSelect={(val) => { if (val) handleSelectType(val) }}
+            blacklist={current.map((v) => v.wood)}
+        />
     </div>
 }

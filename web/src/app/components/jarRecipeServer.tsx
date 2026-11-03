@@ -5,34 +5,32 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import {Grain} from "@/app/components/formSubcomponents/grains";
 import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {JarRecipeSelector, NewJarRecipeForm} from "@/app/components/jarRecipeClient";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
-export function TestJarRecipeOK() {
-    const a: JarRecipeData = {
-        _id: "(JAR RECIPE ID HERE)",
-        name: "(JAR RECIPE NAME)",
-        grains: [{grain: "Oats", percentage: 100}],
-        standard: true,
-        nutrients: [
-            {nutrient: "(NUTRIENT 1)", amount: 3.1, unit: "oz"},
-            {nutrient: "(NUTRIENT 2)", amount: 3.1, unit: "oz"}
-        ],
-        sugars: [
-            {type: "dextrose", amount: 2, unit: "g"},
-            {type: "honey", amount: 2.5, unit: "drops"}
-        ],
-        additives: [
-            {additive: "gypsum", amount: 1 / 8, unit: "tsp/cup oats"},
-            {additive: "charcoal", amount: 1, unit: "pinch"}
-        ],
-        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-    }
-    return a
-}
+// export function TestJarRecipeOK() {
+//     return new JarRecipeData({
+//         _id: "(JAR RECIPE ID HERE)",
+//         name: "(JAR RECIPE NAME)",
+//         grains: [{grain: "Oats", percentage: 100}],
+//         standard: true,
+//         nutrients: [
+//             {nutrient: "(NUTRIENT 1)", amount: 3.1, unit: "oz"},
+//             {nutrient: "(NUTRIENT 2)", amount: 3.1, unit: "oz"}
+//         ],
+//         sugars: [
+//             {type: "dextrose", amount: 2, unit: "g"},
+//             {type: "honey", amount: 2.5, unit: "drops"}
+//         ],
+//         additives: [
+//             {additive: "gypsum", amount: 1 / 8, unit: "tsp/cup oats"},
+//             {additive: "charcoal", amount: 1, unit: "pinch"}
+//         ],
+//         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface JarRecipeData {
     _id: string // jarRecipeId
@@ -44,7 +42,34 @@ export interface JarRecipeData {
     additives?: Additive[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
+}
+export class JarRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<JarRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id // TODO: should this be urlEncoded?
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "jarRecipe"
+    }
+    public description(): string {
+        const standardPart = this.standard?`standard `:''
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}jar recipe ${this.name}`)
+        const nuteSent = `${(this.nutrients===undefined||this.nutrients.length==0)?`no`:this.nutrients.length} nutrients`
+        const liqSent = (this.grains.length==1)?`${this.grains[0].grain} based`:`${this.grains.length} grains`
+        const sugSent = `${(this.sugars===undefined||this.sugars.length==0)?`no`:this.sugars.length} sugars`
+        const addSent = `${(this.additives===undefined||this.additives.length==0)?`No additives`:(this.additives.length==1?`With ${this.additives[0].additive}`:`${this.additives.length} additives`)}`
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${nuteSent}. ${liqSent}. ${sugSent}. ${addSent}. ${lastSent}`
+    }
 }
 
 export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { // TODO: use
@@ -57,13 +82,11 @@ export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { /
     return <CloseableSelector<JarRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewJarRecipe,
         closeTxt: "Close Jar Recipe List",
         createTxt: "Create Jar Recipe",
         lowercase: "jar recipe",
         creatorInPage: sp.creatorInPage,
         createEndpt: "jarRecipe",
-        getId: (v: JarRecipeData) => v._id,
         createSelector:(selHdl: (onSelect: JarRecipeData) => void)=>{
             return <JarRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)
@@ -75,5 +98,5 @@ export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { /
     }}/>
 }
 
-export const ChannelTextNewJarRecipe = "newJarRecipe" // TODO: USE THIS
+// export const ChannelTextNewJarRecipe = "newJarRecipe" // TODO: USE THIS
 

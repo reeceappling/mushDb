@@ -1,44 +1,35 @@
 import {
     Contamination,
-    ExampleContaminations,
-    ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {ACL} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
-import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
-export function TestStasisTubeOk(){
-    const a: StasisTubeData = {
-        _id: "(TUBE ID HERE)",
-        pcRun: "(PC RUN ID)",
-        waterSource: undefined,
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        innoc: "(Innoc transfer id!)",
-        genSpore: 7,
-        genFruitOrSpore: 3,
-        transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
-        parentType: "plate",
-        parent: "(PARENT ID)",
-        pics: ExamplePicsWithNotesIncoming,
-        contamination: ExampleContaminations,
-        knownFruitable: true,
-        sale: "SALE_ID_HERE",
-        disposed: Date.now()+40000,
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
-}
+// export function TestStasisTubeOk(){
+//     return new StasisTubeData({
+//         _id: "(TUBE ID HERE)",
+//         pcRun: "(PC RUN ID)",
+//         waterSource: undefined,
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         innoc: "(Innoc transfer id!)",
+//         genSpore: 7,
+//         genFruitOrSpore: 3,
+//         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
+//         parentType: "plate",
+//         parent: "(PARENT ID)",
+//         pics: ExamplePicsWithNotesIncoming,
+//         contamination: ExampleContaminations,
+//         knownFruitable: true,
+//         sale: "SALE_ID_HERE",
+//         disposed: Date.now()+40000,
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 export interface StasisTubeData {
     _id: string
     pcRun?: string
@@ -60,34 +51,25 @@ export interface StasisTubeData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
-
-export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) { // TODO: use
-    const doSel = (val?: StasisTubeData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
+export class StasisTubeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<StasisTubeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
     }
-    return <CloseableSelector<StasisTubeData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
-        closeTxt: "Close Stasis Tube List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "stasis tube",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        getId: (v: StasisTubeData) => v._id,
-        createSelector:(selHdl: (onSelect: StasisTubeData) => void)=>{
-            return <StasisTubeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "stasisTube"
+    }
+    public description(): string {
+        const firstSent = `Stasis tube ${this._id}`
+        const secondSent = this.species !== undefined?`Species ${this.species}${this.subspecies!==undefined&&`. Subspecies ${this.subspecies}`}`:` Not innoculated`
+        const lastSent = `Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed !== undefined && ` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        return `${firstSent}. ${secondSent}. ${lastSent}`
+    }
 }
