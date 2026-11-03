@@ -92,6 +92,10 @@ chown mongodb:mongodb etc/mongodb.key
 ```bash
 ./scripts/run_main.sh
 ```
+or
+```bash
+./scripts/run_prod.sh
+```
 **The first way if the quick way is unavailable**
 
 Before running the containers, ensure the api binary is built. It should exist at [/bin/mushApi](../bin/mushApi).

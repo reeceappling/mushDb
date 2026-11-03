@@ -1910,7 +1910,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
-		perms := out.Permissions()
+		//perms := out.Permissions()
 		userPermOnEntry := out.Permissions().HighestPermFor(user)
 		if userPermOnEntry == nil {
 			http.Error(w, "item requested cannot be read by this user", http.StatusForbidden)
@@ -1926,21 +1926,21 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if perms.BlanketPerm.CanRead() {
-			w.Header().Set("doIndex", "true")
-			// TODO: if public, set all pictures to cacheable????
-			pictureUrls := []string{} // TODO: FIX!
-			for _, path := range pictureUrls {
-				// TODO: on updates, if changed from public to nonpublic, make sure to remove publicity!
-				publicPath := out.EntryType() + "/" + string(mainCollId.AsBase58())
-				// TODO: insert this into an LRU cache?
-				// TODO: check the LRU cache when retrieving a file....
-			}
-
-			println("got a public item. Should set all associated pictures to cacheable...")
-		} else {
-			w.Header().Set("doIndex", "false")
-		}
+		//if perms.BlanketPerm.CanRead() { // TODO: reeenable and fix
+		//	w.Header().Set("doIndex", "true")
+		//	// TODO: if public, set all pictures to cacheable????
+		//	pictureUrls := []string{} // TODO: FIX!
+		//	for _, path := range pictureUrls {
+		//		// TODO: on updates, if changed from public to nonpublic, make sure to remove publicity!
+		//		publicPath := out.EntryType() + "/" + string(mainCollId.AsBase58())
+		//		// TODO: insert this into an LRU cache?
+		//		// TODO: check the LRU cache when retrieving a file....
+		//	}
+		//
+		//	println("got a public item. Should set all associated pictures to cacheable...")
+		//} else {
+		//	w.Header().Set("doIndex", "false")
+		//}
 		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
 		//if err != nil {
 		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
